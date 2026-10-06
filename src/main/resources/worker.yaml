@@ -1,0 +1,29 @@
+# What this process declares to the worker registry (ADR-038, docs/WORKER_PROTOCOL.md).
+#
+# The job service is a worker like any other: it drains job.media.* and job.text.* and runs them
+# through its in-process JobExecutors. Declaring itself through the same file and the same endpoint
+# as the Python media worker is the point — a registry that only knew about "other people's"
+# workers would describe half the system.
+#
+# Since ADR-067 those bindings are split across TWO LANES — two queues with their own consumer
+# pools, which is what `worker.yaml` has supported since ADR-038: a lane is a binding and a queue,
+# not a subsystem. job.media.analyze and job.text.* are interactive; job.media.generate is batch.
+# The concurrency below is this process's total across both lanes; each lane's own pool size is
+# `orazaka.jobs.lanes.{interactive,batch}-concurrency`.
+#
+# Bindings, never capabilities. Naming a capability here is what coupled the media worker to one
+# pack, and [PACK-002]/[PACK-003] refuse it.
+#
+# NOTE on `family`: it is a coarse, descriptive label and it cannot identify who serves a
+# capability. Phase A seeded family=media onto three different routing keys spanning two processes
+# (job.video.generate and job.compose.assemble reach the Python worker; job.media.generate reaches
+# this one), and this process serves two families at once. `bindings` is the exact answer and is
+# what the coherence check reads. See ADR-038.
+name: orazaka-job-service
+family: core
+bindings:
+  - "job.media.generate"
+  - "job.media.analyze"
+  - "job.text.*"
+version: "1.0.0"
+concurrency: 2

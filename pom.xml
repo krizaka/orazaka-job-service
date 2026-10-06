@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.orazaka</groupId>
+        <artifactId>orazaka-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../../orazaka-libs/orazaka-build/orazaka-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>orazaka-job-service</artifactId>
+    <name>orazaka-job-service</name>
+    <description>Job Orchestration service — async COMMAND executor (JobListener + strategies) over its own AMQP queues, emitting job lifecycle events</description>
+
+    <url>https://github.com/krizaka/orazaka-job-service</url>
+
+    <scm>
+        <url>https://github.com/krizaka/orazaka-job-service</url>
+        <connection>scm:git:https://github.com/krizaka/orazaka-job-service.git</connection>
+        <developerConnection>scm:git:git@github.com:krizaka/orazaka-job-service.git</developerConnection>
+    </scm>
+
+    <properties>
+        <!-- GitHub Packages repository this artifact is published to (orazaka-parent). -->
+        <orazaka.repository>orazaka-job-service</orazaka.repository>
+    </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-assets</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-billing-client</artifactId>
+        </dependency>
+
+        <!-- Web + RestClient + actuator: no controllers, but core needs the RestClient.Builder
+             bean and actuator health smokes the process in the constellation. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Security: the executor sets the SecurityContext per job before dispatch so the
+             interceptor pipeline sees the acting principal. A permit-all SecurityConfig keeps the
+             (controller-less) actuator surface open. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+        <!-- Persistence: owns orazaka_jobs lifecycle (JPA via persistence-app). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
+        </dependency>
+
+        <!-- Cognitive stack (same libraries the monolith bundled — the pipeline runs in-process). -->
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-identity-api</artifactId>
+        </dependency>
+
+        <!-- Tier-1 job-plane contract: the JobCommand wire record every executor here reads, and
+             the capability routing port this service answers for over /internal/v1 (ADR-037). -->
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-jobs-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-tools</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-business</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-persistence-app</artifactId>
+        </dependency>
+        <!-- Bridge: core DB-backed outbound ports (CapabilityProvider, PipelineConfigProvider, …)
+             implemented against the persistence inbound ports, so the in-process pipeline wires. -->
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-persistence-bridge</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-interceptors</artifactId>
+        </dependency>
+
+        <!-- RabbitMQ AMQP — consumes jobs.media/jobs.text, emits job.{id}.done|error -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+        <!-- Distributed tracing (OTLP/HTTP → Jaeger); AMQP observation propagates traceparent. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+        </dependency>
+
+        <!-- @Aspect proxying (sandbox aspect in tools); weaver is BOM-managed. -->
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- JSON Processing -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.amqp</groupId>
+            <artifactId>spring-rabbit-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.orazaka</groupId>
+            <artifactId>orazaka-test-support</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
