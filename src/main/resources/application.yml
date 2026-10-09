@@ -88,7 +88,7 @@ logging:
       total-size-cap: 10MB
       max-history: 7
   level:
-    com.orazaka: ${LOGGING_LEVEL_ORAZAKA:DEBUG}
+    com.krizaka.orazaka: ${LOGGING_LEVEL_ORAZAKA:DEBUG}
     org.springframework.amqp: INFO
 
 # ── Orazaka — organised by module ─────────────────────────────────────────────
@@ -102,11 +102,6 @@ orazaka:
       master-key-file: ${ASSETS_MASTER_KEY_FILE:${user.home}/.orazaka/master.key}
       block-size: ${ASSETS_BLOCK_SIZE:65536}
       accept-plaintext: ${ASSETS_ACCEPT_PLAINTEXT:false}
-  identity:
-    jwt:
-      # Contract copy of the shared HS256 secret the identity service signs with; every host
-      # validates locally, so authorisation costs no per-request identity hop.
-      secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
   # Async job execution lifecycle (job-level timeout).
   jobs:
     execution-timeout: ${JOBS_TIMEOUT_SECONDS:1800}
@@ -119,27 +114,6 @@ orazaka:
       queue:
         max-length: ${BROKER_QUEUE_MAX_LENGTH:1000}
         overflow-strategy: ${BROKER_QUEUE_OVERFLOW:rejectPublish}
-
-  billing:
-    # Bootstrap switch only — the enforcement mode is a row owned by the billing
-    # service. Default OFF wires the no-op adapter, so this service behaves
-    # exactly as before until billing is deliberately turned on.
-    enabled: ${BILLING_ENABLED:false}
-    base-url: ${BILLING_INTERNAL_URL:http://localhost:8095}
-    # Mints the SERVICE token /internal/v1/billing requires (ADR-035). It was absent from
-    # every consumer, so BILLING_ENABLED=true crashed each of them at startup with "the
-    # shared identity secret is required" — billing had never been switched on anywhere.
-    service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
-    connect-timeout: ${BILLING_CONNECT_TIMEOUT:500ms}
-    read-timeout: ${BILLING_READ_TIMEOUT:2s}
-
-  # The executor resolves the acting user + profile from the identity service (cached).
-  job-service:
-    identity-directory:
-      base-url: ${IDENTITY_URL:http://localhost:8083}
-      # Mints the SERVICE token /internal/v1/users requires (ADR-035). Its absence is why every
-      # user lookup from this host returned 401: the adapter sent no Authorization header at all.
-      service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
 
   core:
     image:
@@ -159,3 +133,41 @@ orazaka:
       service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
     orchestration:
       enabled: ${ORCHESTRATION_ENABLED:true}
+
+# ── Krizaka platform kit ──────────────────────────────────────────────────────
+krizaka:
+  billing:
+    # Bootstrap switch only — the enforcement mode is a row owned by the billing
+    # service. Default OFF wires the no-op adapter, so this service behaves
+    # exactly as before until billing is deliberately turned on.
+    enabled: ${BILLING_ENABLED:false}
+    base-url: ${BILLING_INTERNAL_URL:http://localhost:8095}
+    # Mints the SERVICE token /internal/v1/billing requires (ADR-035). It was absent from
+    # every consumer, so BILLING_ENABLED=true crashed each of them at startup with "the
+    # shared identity secret is required" — billing had never been switched on anywhere.
+    service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+    connect-timeout: ${BILLING_CONNECT_TIMEOUT:500ms}
+    read-timeout: ${BILLING_READ_TIMEOUT:2s}
+  users:
+    client:
+      # The users service's internal API (krizaka-users-client): who the acting user is, their
+      # profile, provider keys and rate-limit tier. Every call carries a SERVICE token.
+      base-url: ${IDENTITY_URL:http://localhost:8083}
+      service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+      service-name: orazaka-job-service
+  messaging:
+    exchanges:
+      # Orazaka's bus: the Krizaka building blocks this service embeds (billing-client) publish and
+      # listen on it.
+      events: orazaka.events
+      dead-letter: orazaka.dlx
+    dedup:
+      # Claims are rows in this context's processed_messages table: durable, shared by every
+      # instance, arbitrated by its primary key.
+      store: jdbc
+  security:
+    jwt:
+      # The shared HS256 secret the identity service signs session and service tokens with.
+      # krizaka-security validates every request locally with it and refuses to start when it is
+      # shorter than 32 characters (256 bits).
+      secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
