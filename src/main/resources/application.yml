@@ -156,6 +156,11 @@ krizaka:
       service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
       service-name: orazaka-job-service
   messaging:
+    exchanges:
+      # Orazaka's bus: the Krizaka building blocks this service embeds (billing-client) publish and
+      # listen on it.
+      events: orazaka.events
+      dead-letter: orazaka.dlx
     dedup:
       # Claims are rows in this context's processed_messages table: durable, shared by every
       # instance, arbitrated by its primary key.

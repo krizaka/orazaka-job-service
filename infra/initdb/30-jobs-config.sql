@@ -469,7 +469,7 @@ ON CONFLICT (feature_key) DO NOTHING;
 INSERT INTO orazaka_runtime_config (config_key, config_value, value_type, description) VALUES
 ('rag.enabled', 'true', 'boolean', 'Master toggle for RAG context retrieval in the pipeline (was orazaka.core.rag.enabled).'),
 ('rag.top-k', '3', 'int', 'Number of relevant documents RAG retrieves per query (was orazaka.core.rag.top-k).'),
-('rate-limit.enabled', 'false', 'boolean', 'Master toggle for per-user rate limiting (was orazaka.rate-limit.enabled; tiers already in orazaka_rate_limit_tiers).')
+('rate-limit.enabled', 'false', 'boolean', 'Master toggle for per-user rate limiting (was orazaka.rate-limit.enabled; tiers already in rate_limit_tiers).')
 ON CONFLICT (config_key) DO NOTHING;
 
 -- Seed default 4-tier validation matrix
