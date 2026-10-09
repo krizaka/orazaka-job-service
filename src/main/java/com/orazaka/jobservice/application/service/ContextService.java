@@ -26,6 +26,13 @@ public class ContextService {
   /** The typed onboarding profile: fields identity validated, carried as the platform's. */
   static final String USER_PROFILE_KEY = Context.PLATFORM_NAMESPACE + "user.profile";
 
+  /** The onboarding answers that form the assistant profile, kept out of the free preferences. */
+  private static final Set<String> PROFILE_ATTRIBUTES =
+      Set.of("voiceModel", "primaryIndustry", "aiBehavior");
+
+  private static final String DEFAULT_VOICE_MODEL = "alloy";
+  private static final String DEFAULT_PRIMARY_INDUSTRY = "tech";
+
   private final UserDirectoryClient userDirectoryService;
 
   public ContextService(UserDirectoryClient userDirectoryService) {
@@ -59,21 +66,21 @@ public class ContextService {
     preferences.put(Context.SESSION_ID_KEY, sessionId.toString());
 
     if (profile != null) {
+      // The users service stores Orazaka's onboarding answers as attributes it never interprets;
+      // which ones form the assistant profile, and their defaults, are Orazaka's to decide.
+      Map<String, Object> attributes = new HashMap<>(profile.attributes());
       Map<String, Object> profileContext = new HashMap<>();
-      if (profile.theme() != null) {
-        profileContext.put("theme", profile.theme());
-      }
-      if (profile.voiceModel() != null) {
-        profileContext.put("voiceModel", profile.voiceModel());
-      }
-      if (profile.primaryIndustry() != null) {
-        profileContext.put("primaryIndustry", profile.primaryIndustry());
-      }
-      if (profile.aiBehavior() != null) {
-        profileContext.put("aiBehavior", profile.aiBehavior());
+      profileContext.put("theme", profile.theme());
+      profileContext.put("voiceModel", attributes.getOrDefault("voiceModel", DEFAULT_VOICE_MODEL));
+      profileContext.put(
+          "primaryIndustry", attributes.getOrDefault("primaryIndustry", DEFAULT_PRIMARY_INDUSTRY));
+      Object aiBehavior = attributes.get("aiBehavior");
+      if (aiBehavior != null) {
+        profileContext.put("aiBehavior", aiBehavior);
       }
       preferences.put(USER_PROFILE_KEY, Map.copyOf(profileContext));
-      preferences.putAll(Context.userPreferences(profile.rawPreferences()));
+      attributes.keySet().removeAll(PROFILE_ATTRIBUTES);
+      preferences.putAll(Context.userPreferences(attributes));
     }
 
     return new Context(

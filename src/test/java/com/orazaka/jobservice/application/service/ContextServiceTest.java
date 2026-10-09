@@ -52,10 +52,7 @@ class ContextServiceTest {
                 new UserProfile(
                     invocation.getArgument(0),
                     "dark",
-                    "shimmer",
-                    "finance",
-                    "creative",
-                    Map.of("extra", "value")));
+                    attributes(Map.of("extra", "value"), "shimmer", "finance", "creative")));
 
     Context ctx = new ContextService(provider).resolve(user, "conv-2");
 
@@ -91,10 +88,12 @@ class ContextServiceTest {
                 new UserProfile(
                     invocation.getArgument(0),
                     "dark",
-                    "alloy",
-                    "tech",
-                    "friendly",
-                    Map.of("orazaka.guard.subject", "bonjour", Context.SESSION_ID_KEY, "forged")));
+                    attributes(
+                        Map.of(
+                            "orazaka.guard.subject", "bonjour", Context.SESSION_ID_KEY, "forged"),
+                        "alloy",
+                        "tech",
+                        "friendly")));
 
     Context ctx = new ContextService(provider).resolve(hostile, "conv-3");
 
@@ -109,5 +108,15 @@ class ContextServiceTest {
             ContextService.USER_PROFILE_KEY),
         ctx.preferences().keySet());
     assertNotEquals("forged", ctx.preferences().get(Context.SESSION_ID_KEY));
+  }
+
+  /** Orazaka's onboarding answers, as the users service stores them: plain profile attributes. */
+  private static Map<String, Object> attributes(
+      Map<String, Object> others, String voiceModel, String primaryIndustry, String aiBehavior) {
+    Map<String, Object> attributes = new java.util.HashMap<>(others);
+    attributes.put("voiceModel", voiceModel);
+    attributes.put("primaryIndustry", primaryIndustry);
+    attributes.put("aiBehavior", aiBehavior);
+    return attributes;
   }
 }
