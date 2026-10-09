@@ -8,8 +8,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import com.orazaka.billing.domain.model.BillableCapability;
-import com.orazaka.billing.domain.model.UnmeteredTurn;
+import com.krizaka.billing.domain.model.BillableCapability;
+import com.krizaka.billing.domain.model.UnmeteredTurn;
 import com.orazaka.persistence.domain.model.OutboxMessage;
 import com.orazaka.persistence.domain.ports.inbound.OutboxStore;
 import java.time.Instant;

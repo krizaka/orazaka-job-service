@@ -1,7 +1,7 @@
 package com.orazaka.jobservice.infrastructure.adapter.persistence;
 
-import com.orazaka.billing.domain.model.UnmeteredTurn;
-import com.orazaka.billing.domain.port.UnmeteredTurnRepository;
+import com.krizaka.billing.domain.model.UnmeteredTurn;
+import com.krizaka.billing.domain.port.UnmeteredTurnRepository;
 import com.orazaka.persistence.domain.model.OutboxMessage;
 import com.orazaka.persistence.domain.ports.inbound.OutboxStore;
 import com.orazaka.persistence.infrastructure.config.MessagingContract;

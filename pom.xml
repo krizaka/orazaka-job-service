@@ -50,8 +50,8 @@
             <artifactId>orazaka-assets</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-billing-client</artifactId>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-billing-client</artifactId>
         </dependency>
 
         <!-- Web + RestClient + actuator: no controllers, but core needs the RestClient.Builder

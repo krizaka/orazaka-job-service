@@ -52,10 +52,10 @@ class JobListenerTest {
   @Mock private MessageDedup messageDedupService;
 
   /** What a free turn is recorded into; captured so a test can assert one was written. */
-  private final java.util.List<com.orazaka.billing.domain.model.UnmeteredTurn> recordedTurns =
+  private final java.util.List<com.krizaka.billing.domain.model.UnmeteredTurn> recordedTurns =
       new java.util.ArrayList<>();
 
-  private final com.orazaka.billing.domain.port.UnmeteredTurnRepository unmeteredTurns =
+  private final com.krizaka.billing.domain.port.UnmeteredTurnRepository unmeteredTurns =
       recordedTurns::add;
 
   private JobListener listener;
