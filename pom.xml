@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.orazaka</groupId>
+        <groupId>com.krizaka.orazaka</groupId>
         <artifactId>orazaka-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../../../orazaka-libs/orazaka-build/orazaka-parent/pom.xml</relativePath>
@@ -30,12 +30,22 @@
 
 
     <dependencies>
+        <!-- Krizaka platform kit: idempotent message consumption (claim / release). -->
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-messaging</artifactId>
+        </dependency>
+        <!-- Krizaka platform kit: session-JWT security baseline and service-to-service tokens. -->
+        <dependency>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-assets</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-billing-client</artifactId>
         </dependency>
 
@@ -78,40 +88,40 @@
 
         <!-- Cognitive stack (same libraries the monolith bundled — the pipeline runs in-process). -->
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-identity-api</artifactId>
         </dependency>
 
         <!-- Tier-1 job-plane contract: the JobCommand wire record every executor here reads, and
              the capability routing port this service answers for over /internal/v1 (ADR-037). -->
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-jobs-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-tools</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-business</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-persistence-app</artifactId>
         </dependency>
         <!-- Bridge: core DB-backed outbound ports (CapabilityProvider, PipelineConfigProvider, …)
              implemented against the persistence inbound ports, so the in-process pipeline wires. -->
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-persistence-bridge</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-interceptors</artifactId>
         </dependency>
 
@@ -168,7 +178,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-test-support</artifactId>
         </dependency>
         <dependency>

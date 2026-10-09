@@ -1,5 +1,6 @@
 package com.orazaka.jobservice.infrastructure.adapter.amqp;
 
+import com.krizaka.messaging.dedup.MessageDedup;
 import com.orazaka.assets.application.service.EncryptedAssetService;
 import com.orazaka.billing.domain.model.BillableCapability;
 import com.orazaka.billing.domain.model.BillableUnit;
@@ -23,7 +24,6 @@ import com.orazaka.jobservice.infrastructure.support.AssetFileResolver;
 import com.orazaka.jobservice.infrastructure.support.PathResolver;
 import com.orazaka.persistence.domain.ports.inbound.CapabilityManager;
 import com.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
-import com.orazaka.persistence.domain.ports.inbound.MessageDedupService;
 import com.orazaka.persistence.infrastructure.config.MessagingContract;
 import java.io.File;
 import java.io.InputStream;
@@ -112,7 +112,7 @@ public class JobListener {
   private final JobSimulationHook simulationHook;
   private final UserDirectoryService userDirectoryService;
   private final ContextService contextService;
-  private final MessageDedupService messageDedupService;
+  private final MessageDedup messageDedupService;
   private final EncryptedAssetService encryptedAssetService;
   private final UnmeteredTurnRepository unmeteredTurnRepository;
 
@@ -143,7 +143,7 @@ public class JobListener {
       UserDirectoryService userDirectoryService,
       ContextService contextService,
       CapabilityManager capabilityManager,
-      MessageDedupService messageDedupService,
+      MessageDedup messageDedupService,
       EncryptedAssetService encryptedAssetService,
       UnmeteredTurnRepository unmeteredTurnRepository) {
     this.jobPersistenceProvider =
@@ -181,7 +181,7 @@ public class JobListener {
     this.encryptedAssetService =
         Objects.requireNonNull(encryptedAssetService, "EncryptedAssetService cannot be null");
     this.messageDedupService =
-        Objects.requireNonNull(messageDedupService, "MessageDedupService cannot be null");
+        Objects.requireNonNull(messageDedupService, "MessageDedup cannot be null");
     this.unmeteredTurnRepository =
         Objects.requireNonNull(unmeteredTurnRepository, "UnmeteredTurnRepository cannot be null");
 

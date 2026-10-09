@@ -1,11 +1,11 @@
 package com.orazaka.jobservice.infrastructure.adapter.identity;
 
+import com.krizaka.security.token.ServiceTokenProvider;
 import com.orazaka.identity.domain.model.RateLimitInfo;
 import com.orazaka.identity.domain.model.User;
 import com.orazaka.identity.domain.model.UserProfile;
 import com.orazaka.jobservice.application.service.UserDirectoryService;
 import com.orazaka.jobservice.infrastructure.config.IdentityDirectoryProperties;
-import com.orazaka.jobservice.infrastructure.support.ServiceTokenProvider;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;

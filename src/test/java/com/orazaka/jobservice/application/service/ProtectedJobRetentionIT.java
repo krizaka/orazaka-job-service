@@ -8,6 +8,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.krizaka.messaging.dedup.MessageDedup;
 import com.orazaka.assets.application.service.EncryptedAssetService;
 import com.orazaka.assets.infrastructure.adapter.FileMasterKeyProvider;
 import com.orazaka.core.domain.model.Context;
@@ -23,7 +24,6 @@ import com.orazaka.jobservice.infrastructure.config.JobsProperties;
 import com.orazaka.persistence.domain.model.JobDto;
 import com.orazaka.persistence.domain.ports.inbound.CapabilityManager;
 import com.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
-import com.orazaka.persistence.domain.ports.inbound.MessageDedupService;
 import com.orazaka.test.architecture.SqlBoundaryRules;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -294,7 +294,7 @@ class ProtectedJobRetentionIT {
                     "{}",
                     "{}",
                     true)));
-    MessageDedupService dedup = mock(MessageDedupService.class);
+    MessageDedup dedup = mock(MessageDedup.class);
     lenient().when(dedup.claim(any(), any())).thenReturn(true);
     return new JobListener(
         new JdbcJobs(jdbcTemplate),

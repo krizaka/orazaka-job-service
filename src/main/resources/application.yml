@@ -102,11 +102,6 @@ orazaka:
       master-key-file: ${ASSETS_MASTER_KEY_FILE:${user.home}/.orazaka/master.key}
       block-size: ${ASSETS_BLOCK_SIZE:65536}
       accept-plaintext: ${ASSETS_ACCEPT_PLAINTEXT:false}
-  identity:
-    jwt:
-      # Contract copy of the shared HS256 secret the identity service signs with; every host
-      # validates locally, so authorisation costs no per-request identity hop.
-      secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
   # Async job execution lifecycle (job-level timeout).
   jobs:
     execution-timeout: ${JOBS_TIMEOUT_SECONDS:1800}
@@ -159,3 +154,17 @@ orazaka:
       service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
     orchestration:
       enabled: ${ORCHESTRATION_ENABLED:true}
+
+# ── Krizaka platform kit ──────────────────────────────────────────────────────
+krizaka:
+  messaging:
+    dedup:
+      # Claims are rows in this context's processed_messages table: durable, shared by every
+      # instance, arbitrated by its primary key.
+      store: jdbc
+  security:
+    jwt:
+      # The shared HS256 secret the identity service signs session and service tokens with.
+      # krizaka-security validates every request locally with it and refuses to start when it is
+      # shorter than 32 characters (256 bits).
+      secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}

@@ -3,6 +3,7 @@ package com.orazaka.jobservice.infrastructure.adapter.amqp;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.krizaka.messaging.dedup.MessageDedup;
 import com.orazaka.identity.domain.model.User;
 import com.orazaka.jobs.domain.exception.JobExecutionException;
 import com.orazaka.jobs.domain.model.CapabilityDeclaration;
@@ -13,7 +14,6 @@ import com.orazaka.jobservice.application.service.UserDirectoryService;
 import com.orazaka.jobservice.infrastructure.config.JobsProperties;
 import com.orazaka.persistence.domain.ports.inbound.CapabilityManager;
 import com.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
-import com.orazaka.persistence.domain.ports.inbound.MessageDedupService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -49,7 +49,7 @@ class JobListenerTest {
 
   @Mock private CapabilityManager capabilityManager;
 
-  @Mock private MessageDedupService messageDedupService;
+  @Mock private MessageDedup messageDedupService;
 
   /** What a free turn is recorded into; captured so a test can assert one was written. */
   private final java.util.List<com.orazaka.billing.domain.model.UnmeteredTurn> recordedTurns =

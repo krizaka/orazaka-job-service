@@ -174,27 +174,27 @@ class JobServiceGovernanceTest {
   }
 
   @Test
-  @DisplayName("[KIT-001] every service's security baseline says the same four things")
+  @DisplayName("[KIT-001] every service's filter chain starts from the one security baseline")
   void securityBaselineIsUniform() {
     GovernanceRules.assertSecurityBaselineIsUniform(REPOSITORY_ROOT);
   }
 
   @Test
-  @DisplayName("[KIT-002] dedup claims atomically and releases on failure")
+  @DisplayName("[KIT-002] dedup has one author: krizaka-messaging")
   void dedupIsAtomic() {
     GovernanceRules.assertDedupIsAtomic(REPOSITORY_ROOT);
   }
 
   @Test
-  @DisplayName("[KIT-003] an outbox relay claims the rows it publishes")
+  @DisplayName("[KIT-003] outbox stores claim what they hand the one relay")
   void outboxRelaysClaim() {
     GovernanceRules.assertOutboxRelaysClaim(REPOSITORY_ROOT);
   }
 
   @Test
-  @DisplayName("[KIT-004] the session secret minimum is the same in all five copies")
-  void sessionSecretMinimumIsUniform() {
-    GovernanceRules.assertSessionSecretMinimumIsUniform(REPOSITORY_ROOT);
+  @DisplayName("[KIT-004] session-token security has one author: krizaka-security")
+  void sessionSecurityHasOneAuthor() {
+    GovernanceRules.assertSessionSecurityHasOneAuthor(REPOSITORY_ROOT);
   }
 
   @Test
