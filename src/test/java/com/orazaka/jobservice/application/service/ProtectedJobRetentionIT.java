@@ -9,10 +9,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.krizaka.messaging.dedup.MessageDedup;
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.assets.application.service.EncryptedAssetService;
 import com.orazaka.assets.infrastructure.adapter.FileMasterKeyProvider;
 import com.orazaka.core.domain.model.Context;
-import com.orazaka.identity.domain.model.User;
 import com.orazaka.jobs.domain.model.CapabilityDeclaration;
 import com.orazaka.jobs.domain.model.DataClass;
 import com.orazaka.jobs.domain.model.JobCommand;
@@ -264,7 +265,7 @@ class ProtectedJobRetentionIT {
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
-    UserDirectoryService users = mock(UserDirectoryService.class);
+    UserDirectoryClient users = mock(UserDirectoryClient.class);
     lenient()
         .when(users.getUser(anyString()))
         .thenReturn(

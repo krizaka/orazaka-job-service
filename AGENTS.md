@@ -10,7 +10,7 @@
 
 - **Role:** Asynchronous job executor of the Orazaka engine: drains the interactive and batch lanes, owns the capability registry and the worker registry.
 - **Layer:** Orazaka AI engine
-- **Depends on:** orazaka-build, orazaka-contracts, orazaka-users, orazaka-billing, orazaka-ai-engine — never on another repository's Tier-3 implementation (AGENTS.md §2, [SEAM-002]).
+- **Depends on:** orazaka-build, orazaka-contracts, krizaka-users, orazaka-billing, orazaka-ai-engine — never on another repository's Tier-3 implementation (AGENTS.md §2, [SEAM-002]).
 - **Workspace path:** `orazaka-apps/services/orazaka-job-service`
 
 ## Definition of done

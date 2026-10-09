@@ -1,9 +1,10 @@
 package com.orazaka.jobservice.application.service;
 
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.model.UserProfile;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.core.domain.model.Authority;
 import com.orazaka.core.domain.model.Context;
-import com.orazaka.identity.domain.model.User;
-import com.orazaka.identity.domain.model.UserProfile;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Service;
  * Application service that resolves the orchestration {@link Context} for an authenticated user,
  * enriched with their profile preferences.
  *
- * <p>Injects the {@link UserDirectoryService} once here, so call sites (controllers, listeners)
+ * <p>Injects the {@link UserDirectoryClient} once here, so call sites (controllers, listeners)
  * depend only on this service instead of wiring the provider themselves [ERR-127].
  */
 @Service
@@ -25,11 +26,11 @@ public class ContextService {
   /** The typed onboarding profile: fields identity validated, carried as the platform's. */
   static final String USER_PROFILE_KEY = Context.PLATFORM_NAMESPACE + "user.profile";
 
-  private final UserDirectoryService userDirectoryService;
+  private final UserDirectoryClient userDirectoryService;
 
-  public ContextService(UserDirectoryService userDirectoryService) {
+  public ContextService(UserDirectoryClient userDirectoryService) {
     this.userDirectoryService =
-        Objects.requireNonNull(userDirectoryService, "UserDirectoryService cannot be null");
+        Objects.requireNonNull(userDirectoryService, "UserDirectoryClient cannot be null");
   }
 
   /**

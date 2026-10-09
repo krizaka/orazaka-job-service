@@ -128,14 +128,6 @@ orazaka:
     connect-timeout: ${BILLING_CONNECT_TIMEOUT:500ms}
     read-timeout: ${BILLING_READ_TIMEOUT:2s}
 
-  # The executor resolves the acting user + profile from the identity service (cached).
-  job-service:
-    identity-directory:
-      base-url: ${IDENTITY_URL:http://localhost:8083}
-      # Mints the SERVICE token /internal/v1/users requires (ADR-035). Its absence is why every
-      # user lookup from this host returned 401: the adapter sent no Authorization header at all.
-      service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
-
   core:
     image:
       generation:
@@ -157,6 +149,13 @@ orazaka:
 
 # ── Krizaka platform kit ──────────────────────────────────────────────────────
 krizaka:
+  users:
+    client:
+      # The users service's internal API (krizaka-users-client): who the acting user is, their
+      # profile, provider keys and rate-limit tier. Every call carries a SERVICE token.
+      base-url: ${IDENTITY_URL:http://localhost:8083}
+      service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+      service-name: orazaka-job-service
   messaging:
     dedup:
       # Claims are rows in this context's processed_messages table: durable, shared by every

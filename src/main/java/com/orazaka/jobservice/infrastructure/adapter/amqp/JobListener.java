@@ -1,6 +1,8 @@
 package com.orazaka.jobservice.infrastructure.adapter.amqp;
 
 import com.krizaka.messaging.dedup.MessageDedup;
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.assets.application.service.EncryptedAssetService;
 import com.orazaka.billing.domain.model.BillableCapability;
 import com.orazaka.billing.domain.model.BillableUnit;
@@ -9,7 +11,6 @@ import com.orazaka.billing.domain.model.UnmeteredTurn;
 import com.orazaka.billing.domain.port.UnmeteredTurnRepository;
 import com.orazaka.core.application.pipeline.PipelineShortCircuitException;
 import com.orazaka.core.domain.model.Context;
-import com.orazaka.identity.domain.model.User;
 import com.orazaka.jobs.domain.exception.JobExecutionException;
 import com.orazaka.jobs.domain.model.CapabilityDeclaration;
 import com.orazaka.jobs.domain.model.FailureCause;
@@ -18,7 +19,6 @@ import com.orazaka.jobs.domain.model.JobExecutionContext;
 import com.orazaka.jobs.domain.model.JobExecutionResult;
 import com.orazaka.jobs.domain.port.JobExecutor;
 import com.orazaka.jobservice.application.service.ContextService;
-import com.orazaka.jobservice.application.service.UserDirectoryService;
 import com.orazaka.jobservice.infrastructure.config.JobsProperties;
 import com.orazaka.jobservice.infrastructure.support.AssetFileResolver;
 import com.orazaka.jobservice.infrastructure.support.PathResolver;
@@ -110,7 +110,7 @@ public class JobListener {
   private final int jobTimeoutSeconds;
   private final ObjectMapper objectMapper;
   private final JobSimulationHook simulationHook;
-  private final UserDirectoryService userDirectoryService;
+  private final UserDirectoryClient userDirectoryService;
   private final ContextService contextService;
   private final MessageDedup messageDedupService;
   private final EncryptedAssetService encryptedAssetService;
@@ -140,7 +140,7 @@ public class JobListener {
       JobsProperties jobsProperties,
       ObjectMapper objectMapper,
       Optional<JobSimulationHook> simulationHook,
-      UserDirectoryService userDirectoryService,
+      UserDirectoryClient userDirectoryService,
       ContextService contextService,
       CapabilityManager capabilityManager,
       MessageDedup messageDedupService,
@@ -176,7 +176,7 @@ public class JobListener {
     this.objectMapper = Objects.requireNonNull(objectMapper, "ObjectMapper cannot be null");
     this.simulationHook = simulationHook.orElse(JobSimulationHook.NOOP);
     this.userDirectoryService =
-        Objects.requireNonNull(userDirectoryService, "UserDirectoryService cannot be null");
+        Objects.requireNonNull(userDirectoryService, "UserDirectoryClient cannot be null");
     this.contextService = Objects.requireNonNull(contextService, "ContextService cannot be null");
     this.encryptedAssetService =
         Objects.requireNonNull(encryptedAssetService, "EncryptedAssetService cannot be null");

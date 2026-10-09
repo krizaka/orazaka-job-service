@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.krizaka.messaging.dedup.MessageDedup;
-import com.orazaka.identity.domain.model.User;
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.jobs.domain.exception.JobExecutionException;
 import com.orazaka.jobs.domain.model.CapabilityDeclaration;
 import com.orazaka.jobs.domain.model.JobCommand;
 import com.orazaka.jobs.domain.model.JobExecutionResult;
 import com.orazaka.jobservice.application.service.ContextService;
-import com.orazaka.jobservice.application.service.UserDirectoryService;
 import com.orazaka.jobservice.infrastructure.config.JobsProperties;
 import com.orazaka.persistence.domain.ports.inbound.CapabilityManager;
 import com.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
@@ -43,7 +43,7 @@ class JobListenerTest {
 
   @Mock private ChatGenerationStrategy chatStrategy;
 
-  @Mock private UserDirectoryService userDirectoryService;
+  @Mock private UserDirectoryClient userDirectoryService;
 
   @Mock private ContextService contextService;
 

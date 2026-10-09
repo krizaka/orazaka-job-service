@@ -2,9 +2,10 @@ package com.orazaka.jobservice.application.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.model.UserProfile;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.core.domain.model.Context;
-import com.orazaka.identity.domain.model.User;
-import com.orazaka.identity.domain.model.UserProfile;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -27,7 +28,7 @@ class ContextServiceTest {
   @Test
   void resolve_nullProfile_setsBasicFields() {
     var user = testUser();
-    UserDirectoryService provider = org.mockito.Mockito.mock(UserDirectoryService.class);
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
     org.mockito.Mockito.when(provider.getProfile(org.mockito.ArgumentMatchers.anyString()))
         .thenReturn(null);
 
@@ -44,7 +45,7 @@ class ContextServiceTest {
   @SuppressWarnings("unchecked")
   void resolve_withProfile_mergesPreferences() {
     var user = testUser();
-    UserDirectoryService provider = org.mockito.Mockito.mock(UserDirectoryService.class);
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
     org.mockito.Mockito.when(provider.getProfile(org.mockito.ArgumentMatchers.anyString()))
         .thenAnswer(
             invocation ->
@@ -83,7 +84,7 @@ class ContextServiceTest {
             Map.of("userId", "victim", "orazaka.metering.deferred", true),
             null,
             "free");
-    UserDirectoryService provider = org.mockito.Mockito.mock(UserDirectoryService.class);
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
     org.mockito.Mockito.when(provider.getProfile(org.mockito.ArgumentMatchers.anyString()))
         .thenAnswer(
             invocation ->
