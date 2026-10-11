@@ -48,7 +48,13 @@ public final class SpeechSynthesisStrategy implements JobExecutor {
     if (prompt.startsWith("FAIL")) {
       throw new JobExecutionException("Simulated speech synthesis failure for testing DLQ");
     }
-    String model = modelResolver.resolve(message.model(), "speech", "piper-en-medium-ryan");
+    // resolvedModel(), never model(): a Studio step is dispatched with the "default" sentinel as
+    // its model, and
+    // that sentinel reached LocalAI verbatim ("model default not found") — every speech-synthesis
+    // run failed. The
+    // payload's own model wins, then the sentinel reads as "none" and the catalogue's speech
+    // default applies.
+    String model = modelResolver.resolve(message.resolvedModel(), "speech", "piper-en-medium-ryan");
     String voice = message.voice();
 
     AudioRequest audioRequest =
