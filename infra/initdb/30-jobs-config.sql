@@ -390,9 +390,11 @@ INSERT INTO orazaka_capabilities
 ('orazaka.core.media.audio.analysis', 'audio.analyze', 'job.media.generate', 'AUDIO_MINUTE', 'AUDIO', 'BATCH',
   $${"type": "object", "properties": {"assetId": {"type": "string", "format": "asset-id"}, "model": {"type": "string"}}, "required": ["assetId"]}$$::jsonb,
   $${"type": "object", "properties": {"analysis": {"type": "string"}}, "required": ["analysis"]}$$::jsonb, true),
+-- Image generation takes a seed, a negative prompt and a step count beside the size, and reports
+-- how the image was made (model, seed, generation time) so it can be made again (ADR-075).
 ('orazaka.core.media.image', 'image.generate', 'job.media.generate', 'IMAGE_STEP', 'IMAGE', 'BATCH',
-  $${"type": "object", "properties": {"prompt": {"type": "string", "format": "prose"}, "size": {"type": "string", "default": "1024x1024"}, "model": {"type": "string"}}, "required": ["prompt"]}$$::jsonb,
-  $${"type": "object", "properties": {"url": {"type": "string"}, "format": {"type": "string"}}, "required": ["url"]}$$::jsonb, true),
+  $${"type": "object", "properties": {"prompt": {"type": "string", "format": "prose"}, "size": {"type": "string", "default": "1024x1024"}, "negativePrompt": {"type": "string"}, "seed": {"type": "string"}, "steps": {"type": "string"}, "model": {"type": "string"}}, "required": ["prompt"]}$$::jsonb,
+  $${"type": "object", "properties": {"url": {"type": "string"}, "format": {"type": "string"}, "model": {"type": "string"}, "seed": {"type": "string"}, "generationMs": {"type": "integer"}}, "required": ["url"]}$$::jsonb, true),
 -- Speech synthesis (TTS). Renamed from orazaka.core.chat.speech (ADR-069, #44): the capability is
 -- AUDIO and has nothing to do with the chat capability it shared a prefix with, which made the key
 -- read as conversational when it is media synthesis. Voice comes from the chosen speech model's
