@@ -341,6 +341,17 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('tinyllama:latest', 'TinyLlama (latest)', 'chat', NULL, 'ollama', TRUE)
 ON CONFLICT (model_name) DO NOTHING;
 
+-- Unfiltered chat models — open weights without a vendor's refusal layer, never a default: the operator
+-- chooses to serve one, and the policy stays the operator's (a pack's scopeGuard and safety, enforced
+-- before any model runs; ADR-051, ADR-055). Licences: Apache-2.0 (Qwen), Meta Llama 3 Community Licence
+-- (Dolphin), Gemma Terms of Use (Gemma). The 27B needs a 32 GB+ machine. Migration for an existing
+-- database: krizaka/orazaka infra/migrations/2026-10-11-uncensored-models.sql.
+INSERT INTO orazaka_models (model_name, model_label, category, options, provider_name, is_default) VALUES
+('huihui_ai/qwen2.5-abliterate:7b', 'Qwen 2.5 7B — unfiltered', 'chat', 'q4_K_M', 'ollama', FALSE),
+('dolphin-llama3:8b', 'Dolphin Llama 3 8B — unfiltered', 'chat', 'q4_K_M', 'ollama', FALSE),
+('mdq100/Gemma3-Instruct-Abliterated:27b', 'Gemma 3 27B — unfiltered', 'chat', 'q4_K_M', 'ollama', FALSE)
+ON CONFLICT (model_name) DO NOTHING;
+
 -- Capabilities (operation-graph registry). The frontend chat composer lists every enabled row
 -- here (BootstrapController → /api/v1/features). Two groups:
 --   • Generation — synchronous media synthesis on /api/v1/media/generation/* (video/audio/image + chat.speech TTS).
@@ -535,6 +546,9 @@ UPDATE orazaka_models SET description = 'Whisper Tiny (English) STT. Fastest, sm
 UPDATE orazaka_models SET description = 'Qwen 2.5 Coder 7B — code generation and completion (q4_K_M). Local code default.' WHERE model_name = 'qwen2.5-coder:7b';
 UPDATE orazaka_models SET description = 'Code Llama 7B — code generation and explanation (q4_K_M).' WHERE model_name = 'codellama:7b';
 UPDATE orazaka_models SET description = 'TinyLlama — tiny, fast chat model for local testing. Limited reasoning.' WHERE model_name = 'tinyllama:latest';
+UPDATE orazaka_models SET description = 'Qwen 2.5 7B Instruct with the refusal direction removed (abliterated), Apache-2.0. Answers legitimate professional questions — security, medicine, law, fiction — without a vendor''s refusals; your packs set the rules. French and English.' WHERE model_name = 'huihui_ai/qwen2.5-abliterate:7b';
+UPDATE orazaka_models SET description = 'Dolphin 2.9 on Llama 3 8B (Meta Llama 3 Community Licence) — fine-tuned without a refusal layer. Frank, compliant answers; the operator''s packs set the rules.' WHERE model_name = 'dolphin-llama3:8b';
+UPDATE orazaka_models SET description = 'Gemma 3 27B Instruct with the refusal direction removed (abliterated), Gemma Terms of Use. The most accurate unfiltered model of the catalogue — the one behind the krizaka.com demos. ~17 GB: a 32 GB+ machine.' WHERE model_name = 'mdq100/Gemma3-Instruct-Abliterated:27b';
 
 
 -- ── MCP registry + tool cache/config (router-hosted MCP execution; Phase 4 kept the
