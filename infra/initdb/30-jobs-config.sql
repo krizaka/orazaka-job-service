@@ -290,11 +290,15 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('piper-en-medium-ryan', 'Piper Ryan (en)', 'speech', 'Ryan,Medium', 'localai', TRUE, NULL, NULL, NULL),
 ('piper-fr-medium', 'Piper Medium (fr)', 'speech', 'Medium,Fr', 'localai', FALSE, NULL, NULL, NULL),
 ('tts-1', 'OpenAI TTS-1', 'speech', 'Alloy,Echo,Fable,Onyx,Nova,Shimmer', 'localai', FALSE, NULL, NULL, NULL),
--- Image Models
-('sdxl-turbo-gguf', 'SDXL Turbo (GGUF)', 'image', NULL, 'localai-image', FALSE, NULL, NULL, NULL),
-('sd-1.5-apple-coreml', 'SD 1.5 (Apple CoreML)', 'image', NULL, 'localai-image', FALSE, NULL, NULL, NULL),
-('stable-diffusion-xl', 'Stable Diffusion XL', 'image', NULL, 'localai-image', TRUE, NULL, NULL, NULL),
-('v1-5-pruned-emaonly', 'SD 1.5 Pruned EMA (safetensors)', 'image', NULL, 'localai-image', FALSE, NULL, NULL, 'APPLE_SILICON_MLX'),
+-- Image Models — what sd-server (stable-diffusion.cpp, Metal, :8086) can actually serve. Each
+-- model_name is the id of an install recipe of the orazaka CLI (`orazaka models image`), which
+-- launches the DEFAULT row and nothing else: sd-server serves one model at a time, and a row it
+-- cannot serve would put the wrong model's name on the image and on the bill. max_steps is the
+-- model's own step count — the engine sends it with every request and IMAGE_STEP bills it.
+-- Licences allow commercial use; SDXL Turbo (non-commercial research licence) is not listed.
+('flux-2-klein-4b', 'FLUX.2 [klein] 4B', 'image', NULL, 'localai-image', TRUE, 4, NULL, NULL),
+('z-image-turbo', 'Z-Image Turbo', 'image', NULL, 'localai-image', FALSE, 8, NULL, NULL),
+('v1-5-pruned-emaonly', 'Stable Diffusion 1.5', 'image', NULL, 'localai-image', FALSE, 20, NULL, NULL),
 -- Video Models
 -- SVD-XT is HEAVY (needs >64GB unified memory); kept in the catalog but NOT the default.
 -- The worker's memory preflight fails it cleanly on a 64GB Mac (§12: honest failure).
@@ -509,10 +513,9 @@ UPDATE orazaka_models SET description = 'Fast, lightweight English neural TTS (P
 UPDATE orazaka_models SET description = 'Balanced English neural TTS (Piper, Ryan voice). Natural prosody at modest CPU cost. Local speech default.' WHERE model_name = 'piper-en-medium-ryan';
 UPDATE orazaka_models SET description = 'French neural TTS (Piper). Natural French speech, medium quality, CPU-friendly.' WHERE model_name = 'piper-fr-medium';
 UPDATE orazaka_models SET description = 'OpenAI-compatible TTS with six selectable voices (Alloy, Echo, Fable, Onyx, Nova, Shimmer), served locally via LocalAI.' WHERE model_name = 'tts-1';
-UPDATE orazaka_models SET description = 'SDXL Turbo (GGUF) — single-step image generation. Very fast previews, lower detail.' WHERE model_name = 'sdxl-turbo-gguf';
-UPDATE orazaka_models SET description = 'Stable Diffusion 1.5 compiled for Apple CoreML. Efficient on-device images on Apple Silicon.' WHERE model_name = 'sd-1.5-apple-coreml';
-UPDATE orazaka_models SET description = 'Stable Diffusion XL — high-detail 1024px images. Local image default; heavier than SD 1.5.' WHERE model_name = 'stable-diffusion-xl';
-UPDATE orazaka_models SET description = 'Stable Diffusion 1.5 (pruned EMA, safetensors). Compact classic model; runs via Apple MLX.' WHERE model_name = 'v1-5-pruned-emaonly';
+UPDATE orazaka_models SET description = 'FLUX.2 [klein] 4B (Apache-2.0) — editorial photographs, illustrations and miniatures in 4 steps, 1024 px in about 80 s on an M1 Max. Local image default.' WHERE model_name = 'flux-2-klein-4b';
+UPDATE orazaka_models SET description = 'Z-Image Turbo (Apache-2.0) — the most detailed photographs, about three times slower than FLUX.2 [klein]. Renders lettering readily: keep words out of the prompt.' WHERE model_name = 'z-image-turbo';
+UPDATE orazaka_models SET description = 'Stable Diffusion 1.5 (CreativeML OpenRAIL-M) — the former default: 512 px, short prompts. For small machines.' WHERE model_name = 'v1-5-pruned-emaonly';
 UPDATE orazaka_models SET description = 'FLUX.1 Schnell, 4-bit quantized for Apple MLX. Fast, high-quality images natively on Apple Silicon.' WHERE model_name = 'argmaxinc/mlx-FLUX.1-schnell-4bit-quantized';
 UPDATE orazaka_models SET description = 'Stable Video Diffusion XT — highest-quality image-to-video. Heavy: needs >64GB unified memory or CUDA. Not recommended on a 64GB Mac.' WHERE model_name = 'stable-video-diffusion-img2vid-xt';
 UPDATE orazaka_models SET description = 'AnimateDiff Lightning on Apple Metal (MPS). Fast 8-step text-to-video that fits a 64GB Mac. Local video default.' WHERE model_name = 'animatediff-lightning-mps';

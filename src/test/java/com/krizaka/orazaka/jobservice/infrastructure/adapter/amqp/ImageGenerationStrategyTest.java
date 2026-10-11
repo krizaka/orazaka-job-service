@@ -3,6 +3,7 @@ package com.krizaka.orazaka.jobservice.infrastructure.adapter.amqp;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.krizaka.orazaka.core.domain.model.image.ImageDirection;
 import com.krizaka.orazaka.core.domain.model.image.ImageRequest;
 import com.krizaka.orazaka.core.domain.model.image.ImageResponse;
 import com.krizaka.orazaka.core.domain.ports.inbound.AiClient;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -126,6 +128,71 @@ class ImageGenerationStrategyTest {
 
     assertNotNull(result);
     assertEquals("data:image/png;base64,!!!invalid!!!", result.get("url"));
+  }
+
+  @Test
+  void execute_carriesSizeSeedAndNegativePrompt_andReportsHowTheImageWasMade() throws Exception {
+    Map<String, Object> payload =
+        Map.of(
+            "prompt", "A tea glass on a wooden table",
+            "size", "1344x768",
+            "seed", "4242",
+            "negativePrompt", "text, logo");
+    JobCommand message = new JobCommand("job-2", "user-1", "image.generation", "", payload);
+    JobExecutionContext context =
+        new JobExecutionContext(
+            "test-user", "test-conversation", java.util.Map.of(), java.util.Set.of());
+    when(aiClient.image(any(ImageRequest.class)))
+        .thenReturn(new ImageResponse(new byte[] {1, 2, 3}, null, "png"));
+
+    Map<String, Object> result = strategy.execute(message, context).output();
+
+    ArgumentCaptor<ImageRequest> sent = ArgumentCaptor.forClass(ImageRequest.class);
+    verify(aiClient).image(sent.capture());
+    assertEquals(1344, sent.getValue().width());
+    assertEquals(768, sent.getValue().height());
+    assertEquals(new ImageDirection("text, logo", 4242L, null), sent.getValue().direction());
+    assertEquals("stable-diffusion-xl", result.get("model"));
+    assertEquals("4242", result.get("seed"));
+    assertTrue(result.get("generationMs") instanceof Long);
+  }
+
+  @Test
+  void execute_withoutASeed_choosesOne_andReportsIt() throws Exception {
+    JobCommand message =
+        new JobCommand("job-3", "user-1", "image.generation", "", Map.of("prompt", "A kitten"));
+    JobExecutionContext context =
+        new JobExecutionContext(
+            "test-user", "test-conversation", java.util.Map.of(), java.util.Set.of());
+    when(aiClient.image(any(ImageRequest.class)))
+        .thenReturn(new ImageResponse(new byte[] {1, 2, 3}, null, "png"));
+
+    Map<String, Object> result = strategy.execute(message, context).output();
+
+    ArgumentCaptor<ImageRequest> sent = ArgumentCaptor.forClass(ImageRequest.class);
+    verify(aiClient).image(sent.capture());
+    Long seed = sent.getValue().direction().seed();
+    assertNotNull(seed, "a job that chose no seed could never be made again");
+    assertEquals(String.valueOf(seed), result.get("seed"));
+  }
+
+  @Test
+  void execute_withAMalformedSize_failsTheJob() {
+    JobCommand message =
+        new JobCommand(
+            "job-4",
+            "user-1",
+            "image.generation",
+            "",
+            Map.of("prompt", "A kitten", "size", "huge"));
+    JobExecutionContext context =
+        new JobExecutionContext(
+            "test-user", "test-conversation", java.util.Map.of(), java.util.Set.of());
+
+    assertThrows(
+        com.krizaka.orazaka.jobs.domain.exception.JobExecutionException.class,
+        () -> strategy.execute(message, context));
+    verifyNoInteractions(aiClient);
   }
 
   /** A real store over a throwaway keyring: tests exercise the format, never a stub of it. */
