@@ -295,7 +295,7 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 -- launches the DEFAULT row and nothing else: sd-server serves one model at a time, and a row it
 -- cannot serve would put the wrong model's name on the image and on the bill. max_steps is the
 -- model's own step count — the engine sends it with every request and IMAGE_STEP bills it.
--- Licences allow commercial use; SDXL Turbo (non-commercial research licence) is not listed.
+-- Licences allow commercial use: SDXL Turbo (non-commercial research licence) is not listed.
 ('flux-2-klein-4b', 'FLUX.2 [klein] 4B', 'image', NULL, 'localai-image', TRUE, 4, NULL, NULL),
 ('z-image-turbo', 'Z-Image Turbo', 'image', NULL, 'localai-image', FALSE, 8, NULL, NULL),
 ('v1-5-pruned-emaonly', 'Stable Diffusion 1.5', 'image', NULL, 'localai-image', FALSE, 20, NULL, NULL),
