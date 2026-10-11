@@ -64,7 +64,7 @@ public final class ImageGenerationStrategy implements JobExecutor {
       throw new JobExecutionException(malformed.getMessage(), malformed);
     }
 
-    String model = modelResolver.resolve(message.resolvedModel(), "image", "z-image-turbo");
+    String model = modelResolver.resolve(message.resolvedModel(), "image", "flux-2-klein-4b");
     ImageRequest imageRequest =
         new ImageRequest(
             prompt,
