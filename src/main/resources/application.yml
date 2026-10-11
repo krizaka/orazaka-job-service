@@ -118,10 +118,13 @@ orazaka:
   core:
     image:
       generation:
-        # The denoising-step count this deployment runs at. NOT a request parameter: sd-server
-        # takes --steps at launch, so the CLI that starts it and this meter must read the same
-        # env var — it is what IMAGE_STEP prices a generation on (ADR-047).
+        # The step count for a model the catalogue gives none (orazaka_models.max_steps) when the
+        # request names none. The engine sends the count it chose with every request, so the
+        # server runs — and IMAGE_STEP prices — exactly that count (ADR-047).
         steps: ${IMAGE_GEN_STEPS:20}
+        # A 1024x1280 FLUX.2 [klein] image takes ~105 s on an M1 Max and Z-Image Turbo ~4 min: the
+        # former 180 s ceiling turned the slower ones into a 1x1 placeholder (SafeImageModel).
+        read-timeout-ms: ${IMAGE_GEN_READ_TIMEOUT_MS:600000}
     rag:
       enabled: true
       store-type: pgvector
