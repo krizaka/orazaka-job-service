@@ -354,6 +354,12 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('tinyllama:latest', 'TinyLlama (latest)', 'chat', NULL, 'ollama', TRUE)
 ON CONFLICT (model_name) DO NOTHING;
 
+-- The 7B instruct model the voice turn is measured with (ADR-076): good French, ~4.7 GB on an M1
+-- Max, Apache-2.0. Never a default — it is chosen (ORAZAKA_OLLAMA_MODEL), like every chat model.
+INSERT INTO orazaka_models (model_name, model_label, category, options, provider_name, is_default) VALUES
+('qwen2.5:7b', 'Qwen 2.5 7B Instruct', 'chat', 'q4_K_M', 'ollama', FALSE)
+ON CONFLICT (model_name) DO NOTHING;
+
 -- Unfiltered chat models — open weights without a vendor's refusal layer, never a default: the operator
 -- chooses to serve one, and the policy stays the operator's (a pack's scopeGuard and safety, enforced
 -- before any model runs; ADR-051, ADR-055). Licences: Apache-2.0 (Qwen), Meta Llama 3 Community Licence
@@ -538,6 +544,7 @@ ON CONFLICT (interceptor_key) DO NOTHING;
 UPDATE orazaka_models SET description = 'Fast, lightweight English neural TTS (Piper). Low fidelity, minimal memory — quick local voice checks.' WHERE model_name = 'piper-en-low';
 UPDATE orazaka_models SET description = 'Balanced English neural TTS (Piper, Ryan voice). Natural prosody at modest CPU cost. Local speech default.' WHERE model_name = 'piper-en-medium-ryan';
 UPDATE orazaka_models SET description = 'French neural TTS (Piper). Natural French speech, medium quality, CPU-friendly.' WHERE model_name = 'piper-fr-medium';
+UPDATE orazaka_models SET description = 'Qwen 2.5 7B Instruct (Apache-2.0) — fluent French and English, the model the voice turn is measured with: first spoken sentence in about two seconds on an M1 Max.' WHERE model_name = 'qwen2.5:7b';
 UPDATE orazaka_models SET description = 'French neural TTS (Piper, Siwis voice, female, CC-BY 4.0). Clear, natural French — the fr-FR voice of the voice turn.' WHERE model_name = 'piper-fr-siwis-medium';
 UPDATE orazaka_models SET description = 'French neural TTS (Piper, Tom voice, male, AGPL-3.0 weights). 44.1 kHz, warm timbre — the second fr-FR voice of the voice turn.' WHERE model_name = 'piper-fr-tom-medium';
 -- Each voice's language, declared, and the voice a locale gets by default (ADR-076).
