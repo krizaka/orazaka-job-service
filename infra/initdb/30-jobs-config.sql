@@ -217,8 +217,17 @@ CREATE TABLE orazaka_models (
     max_steps INT,
     recommended_fps INT,
     supported_hardware VARCHAR(255),
-    description TEXT
+    description TEXT,
+    -- A speech voice's language, declared (ADR-076): the voice turn picks the voice of the turn's
+    -- locale from here, never from the name or the options. NULL for everything that is not a
+    -- voice, and for a voice that serves no one locale (tts-1).
+    locale VARCHAR(16),
+    -- The voice a locale gets when the caller names none. One per (category, locale), enforced
+    -- below; independent of is_default, which stays the category's default for the job plane.
+    locale_default BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT ck_models_locale_default_has_locale CHECK (NOT locale_default OR locale IS NOT NULL)
 );
+CREATE UNIQUE INDEX ux_models_locale_default ON orazaka_models (category, locale) WHERE locale_default;
 
 CREATE TABLE ai_providers (
     id SERIAL PRIMARY KEY,
@@ -289,6 +298,10 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('piper-en-low', 'Piper Low (en)', 'speech', 'Ryan,Low', 'localai', FALSE, NULL, NULL, NULL),
 ('piper-en-medium-ryan', 'Piper Ryan (en)', 'speech', 'Ryan,Medium', 'localai', TRUE, NULL, NULL, NULL),
 ('piper-fr-medium', 'Piper Medium (fr)', 'speech', 'Medium,Fr', 'localai', FALSE, NULL, NULL, NULL),
+-- The two fr-FR voices of the voice turn (ADR-076): siwis (female, CC-BY 4.0) and tom (male,
+-- AGPL-3.0 weights, used unmodified and never redistributed by this repository).
+('piper-fr-siwis-medium', 'Piper Siwis (fr-FR, féminine)', 'speech', 'Medium,Fr', 'localai', FALSE, NULL, NULL, NULL),
+('piper-fr-tom-medium', 'Piper Tom (fr-FR, masculine)', 'speech', 'Medium,Fr', 'localai', FALSE, NULL, NULL, NULL),
 ('tts-1', 'OpenAI TTS-1', 'speech', 'Alloy,Echo,Fable,Onyx,Nova,Shimmer', 'localai', FALSE, NULL, NULL, NULL),
 -- Image Models — what sd-server (stable-diffusion.cpp, Metal, :8086) can actually serve. Each
 -- model_name is the id of an install recipe of the orazaka CLI (`orazaka models image`), which
@@ -525,6 +538,12 @@ ON CONFLICT (interceptor_key) DO NOTHING;
 UPDATE orazaka_models SET description = 'Fast, lightweight English neural TTS (Piper). Low fidelity, minimal memory — quick local voice checks.' WHERE model_name = 'piper-en-low';
 UPDATE orazaka_models SET description = 'Balanced English neural TTS (Piper, Ryan voice). Natural prosody at modest CPU cost. Local speech default.' WHERE model_name = 'piper-en-medium-ryan';
 UPDATE orazaka_models SET description = 'French neural TTS (Piper). Natural French speech, medium quality, CPU-friendly.' WHERE model_name = 'piper-fr-medium';
+UPDATE orazaka_models SET description = 'French neural TTS (Piper, Siwis voice, female, CC-BY 4.0). Clear, natural French — the fr-FR voice of the voice turn.' WHERE model_name = 'piper-fr-siwis-medium';
+UPDATE orazaka_models SET description = 'French neural TTS (Piper, Tom voice, male, AGPL-3.0 weights). 44.1 kHz, warm timbre — the second fr-FR voice of the voice turn.' WHERE model_name = 'piper-fr-tom-medium';
+-- Each voice's language, declared, and the voice a locale gets by default (ADR-076).
+UPDATE orazaka_models SET locale = 'en' WHERE model_name IN ('piper-en-low', 'piper-en-medium-ryan');
+UPDATE orazaka_models SET locale = 'fr-FR' WHERE model_name IN ('piper-fr-medium', 'piper-fr-siwis-medium', 'piper-fr-tom-medium');
+UPDATE orazaka_models SET locale_default = TRUE WHERE model_name IN ('piper-en-medium-ryan', 'piper-fr-siwis-medium');
 UPDATE orazaka_models SET description = 'OpenAI-compatible TTS with six selectable voices (Alloy, Echo, Fable, Onyx, Nova, Shimmer), served locally via LocalAI.' WHERE model_name = 'tts-1';
 UPDATE orazaka_models SET description = 'FLUX.2 [klein] 4B (Apache-2.0) — editorial photographs, illustrations and miniatures in 4 steps, 1024 px in about 80 s on an M1 Max. Local image default.' WHERE model_name = 'flux-2-klein-4b';
 UPDATE orazaka_models SET description = 'Z-Image Turbo (Apache-2.0) — the most detailed photographs, about three times slower than FLUX.2 [klein]. Renders lettering readily: keep words out of the prompt.' WHERE model_name = 'z-image-turbo';
