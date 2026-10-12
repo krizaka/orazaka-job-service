@@ -19,3 +19,6 @@
 2. Inside the workspace, the cross-repository rules are green as well
    (`./mvnw -f orazaka-apps/services/orazaka-job-service/pom.xml verify` from the workspace root).
 3. Spotless (google-java-format) passes — it is bound to `validate`.
+4. The change ships with its tests — a unit test for logic, a Testcontainers integration test for an adapter, an
+   endpoint or a flow; a fix starts with a failing test that reproduces the bug. CI runs them and must be green; no
+   test = not done (workspace [`AGENTS.md` §9](https://github.com/krizaka/orazaka/blob/main/AGENTS.md#9-testing)).
