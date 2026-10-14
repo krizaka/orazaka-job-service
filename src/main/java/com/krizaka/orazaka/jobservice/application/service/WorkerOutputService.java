@@ -26,9 +26,10 @@ import org.springframework.stereotype.Service;
  *   <li><b>adopts the job row</b> when there is none — a Studio step drained by a worker never had
  *       one, which is why its video could be produced, billed and never opened. The owner is the
  *       row's when the row exists; only an absent row takes the run's actor the worker relays, the
- *       same identity the job command carried (and a worker holds a {@code SERVICE} token, ADR-035);
- *   <li><b>seals it</b> with the platform's key ({@link MediaFileStore}, ADR-054) — the droplet never
- *       holds that key;
+ *       same identity the job command carried (and a worker holds a {@code SERVICE} token,
+ *       ADR-035);
+ *   <li><b>seals it</b> with the platform's key ({@link MediaFileStore}, ADR-054) — the droplet
+ *       never holds that key;
  *   <li>answers the URL the asset is served under, {@code /api/v1/assets/{jobId}/{filename}}.
  * </ol>
  */

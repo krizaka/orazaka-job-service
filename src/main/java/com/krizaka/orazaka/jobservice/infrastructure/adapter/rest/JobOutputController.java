@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Where a worker on another host hands over what a job produced (ADR-077).
  *
- * <p>{@code /internal/v1}: service-to-service, gated on the {@code SERVICE} authority (ADR-035) —
- * a GPU droplet reaches it through the dev environment's relay, never through the edge.
+ * <p>{@code /internal/v1}: service-to-service, gated on the {@code SERVICE} authority (ADR-035) — a
+ * GPU droplet reaches it through the dev environment's relay, never through the edge.
  */
 @RestController
 @RequestMapping("/internal/v1/jobs")
