@@ -322,6 +322,12 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('mlx-animatediff-lightning', 'MLX Native AnimateDiff', 'video', NULL, 'localai-video', FALSE, 8, 12, 'APPLE_SILICON_MLX'),
 ('mlx-stable-diffusion-video', 'MLX Native Video', 'video', NULL, 'localai-video', FALSE, 25, 14, 'APPLE_SILICON_MLX'),
 ('stable-video-diffusion-img2vid-xt-mps-fp32', 'SVD XT (PyTorch MPS Float32)', 'video', NULL, 'localai-video', FALSE, 25, 14, 'APPLE_SILICON_MLX'),
+-- Wan 2.x (Apache-2.0) — the 9:16 video of the hourly GPU host (ADR-077), served by the CUDA image of
+-- orazaka-worker-media. supported_hardware stays NULL: the core does not run them, a worker does, and
+-- the worker refuses by name a model it cannot serve; the HOST check would grey them out on every core
+-- that is not itself a GPU machine (dev runs on App Platform). recommended_fps is the model's own.
+('wan2.2-ti2v-5b', 'Wan 2.2 TI2V 5B (9:16, GPU)', 'video', NULL, 'localai-video', FALSE, 40, 24, NULL),
+('wan2.1-t2v-1.3b', 'Wan 2.1 T2V 1.3B (9:16, GPU)', 'video', NULL, 'localai-video', FALSE, 30, 16, NULL),
 -- Vision Models
 -- The vision DEFAULT is llava, not llama3.2-vision (ADR-042). The latter is the better model and
 -- was the seeded default, but its `mllama` architecture is not supported by the llama-server this
@@ -403,7 +409,7 @@ INSERT INTO orazaka_capabilities
     (feature_key, handler_key, routing_key,
      billable_unit, billable_capability, latency_class, input_schema, output_schema, is_enabled) VALUES
 ('orazaka.core.media.video', 'video.generate', 'job.video.generate', 'OUTPUT_SECOND', 'VIDEO', 'BATCH',
-  $${"type": "object", "properties": {"prompt": {"type": "string", "format": "prose", "description": "What must happen on screen."}, "durationSeconds": {"type": "integer", "minimum": 1, "maximum": 20, "default": 5}, "image": {"type": "string", "format": "asset-id", "description": "An uploaded still to start from (img2vid)."}, "model": {"type": "string"}}, "required": ["prompt"]}$$::jsonb,
+  $${"type": "object", "properties": {"prompt": {"type": "string", "format": "prose", "description": "What must happen on screen."}, "durationSeconds": {"type": "integer", "minimum": 1, "maximum": 20, "default": 5}, "aspect": {"type": "string", "enum": ["9:16", "16:9", "1:1"], "default": "9:16", "description": "The frame: 9:16 is the vertical short (TikTok, Reels, Shorts)."}, "seed": {"type": "string", "description": "Makes the same clip again with the same prompt and model."}, "image": {"type": "string", "format": "asset-id", "description": "An uploaded still to start from (img2vid)."}, "model": {"type": "string"}}, "required": ["prompt"]}$$::jsonb,
   $${"type": "object", "properties": {"url": {"type": "string"}, "format": {"type": "string"}, "metrics": {"type": "object"}}, "required": ["url"]}$$::jsonb, true),
 -- This row was labelled "Audio Generation" at /api/v1/media/generation/audio, and phase A recorded
 -- it as "generation routed to an analysis handler". Both were wrong about WHICH capability it is.
@@ -563,6 +569,8 @@ UPDATE orazaka_models SET description = 'AnimateDiff Lightning on Apple MLX. Nat
 UPDATE orazaka_models SET description = 'Stable Diffusion video on Apple MLX. Higher quality (25 steps, ~14fps); heavier than AnimateDiff.' WHERE model_name = 'mlx-stable-diffusion-video';
 UPDATE orazaka_models SET description = 'SVD XT in PyTorch MPS float32. Highest fidelity but ~96GB memory — will fail on a 64GB Mac.' WHERE model_name = 'stable-video-diffusion-img2vid-xt-mps-fp32';
 UPDATE orazaka_models SET description = 'ByteDance AnimateDiff Lightning weights (MLX). Fast 8-step text-to-video at ~12fps.' WHERE model_name = 'ByteDance/AnimateDiff-Lightning';
+UPDATE orazaka_models SET description = 'Wan 2.2 TI2V 5B (Apache-2.0) — vertical shorts at 704x1280, 5 s at 24 fps, on the GPU host (48 GB). The 9:16 model of the demos.' WHERE model_name = 'wan2.2-ti2v-5b';
+UPDATE orazaka_models SET description = 'Wan 2.1 T2V 1.3B (Apache-2.0) — vertical clips at 480x832, 5 s at 16 fps, on the small GPU host (20 GB). Fast drafts.' WHERE model_name = 'wan2.1-t2v-1.3b';
 UPDATE orazaka_models SET description = 'LLaVA multimodal model — describe and answer questions about images.' WHERE model_name = 'llava:latest';
 UPDATE orazaka_models SET description = 'LLaVA v1.6 — improved image understanding and OCR over base LLaVA.' WHERE model_name = 'llava:v1.6';
 UPDATE orazaka_models SET description = 'BakLLaVA (Mistral-based) vision model. Compact image understanding.' WHERE model_name = 'bakllava:latest';
