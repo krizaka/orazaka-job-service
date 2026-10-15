@@ -44,7 +44,12 @@ class JobRetentionServiceTest {
   void onlyProtectedClassesAreSelected() {
     JdbcTemplate jdbc = mock(JdbcTemplate.class);
 
-    new JobRetentionService(jdbc).purgeExpired(ROOT);
+    new JobRetentionService(
+            jdbc,
+            new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
+            new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                "local", null, null, "storage.bunnycdn.com", null, "default"))
+        .purgeExpired(ROOT);
 
     verify(jdbc, never())
         .query(

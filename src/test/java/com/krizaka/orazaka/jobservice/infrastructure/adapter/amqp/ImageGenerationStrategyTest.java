@@ -34,7 +34,14 @@ class ImageGenerationStrategyTest {
   void setUp() {
     strategy =
         new ImageGenerationStrategy(
-            aiClient, modelResolver, new MediaFileStore(testAssets()), tempDir.toString());
+            aiClient,
+            modelResolver,
+            new MediaFileStore(
+                testAssets(),
+                new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
+                new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                    "local", null, null, "storage.bunnycdn.com", null, "default")),
+            tempDir.toString());
     lenient()
         .when(modelResolver.resolve(any(), eq("image"), any()))
         .thenReturn("stable-diffusion-xl");

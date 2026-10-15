@@ -56,7 +56,14 @@ class AudioBillingDivergenceContract {
         .thenReturn(new AudioResponse(new byte[4096], "mp3"));
     SpeechSynthesisStrategy strategy =
         new SpeechSynthesisStrategy(
-            aiClient, models, new MediaFileStore(JobListenerTest.testAssets()), uploads.toString());
+            aiClient,
+            models,
+            new MediaFileStore(
+                JobListenerTest.testAssets(),
+                new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
+                new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                    "local", null, null, "storage.bunnycdn.com", null, "default")),
+            uploads.toString());
 
     // The divergence: two texts in one payload. `requirePrompt` sends `prompt`; a meter reading
     // the request's other field would bill 120 characters for 27 characters of speech.

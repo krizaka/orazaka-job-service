@@ -114,7 +114,12 @@ class ProtectedJobRetentionIT {
             POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
     jdbcTemplate = new JdbcTemplate(dataSource);
     createJobPlaneTables();
-    retention = new JobRetentionService(jdbcTemplate);
+    retention =
+        new JobRetentionService(
+            jdbcTemplate,
+            new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
+            new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                "local", null, null, "storage.bunnycdn.com", null, "default"));
     executor = Executors.newVirtualThreadPerTaskExecutor();
   }
 

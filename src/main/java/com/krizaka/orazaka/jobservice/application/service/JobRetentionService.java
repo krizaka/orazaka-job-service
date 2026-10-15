@@ -1,5 +1,8 @@
 package com.krizaka.orazaka.jobservice.application.service;
 
+import com.krizaka.orazaka.assets.domain.port.AssetKeys;
+import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
+import com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties;
 import com.krizaka.orazaka.jobs.domain.model.DataClass;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -55,9 +58,31 @@ public class JobRetentionService {
   static final Duration TOMBSTONE_HORIZON = Duration.ofDays(7);
 
   private final JdbcTemplate jdbcTemplate;
+  private final DurableAssetStore durableAssetStore;
+  private final MediaStorageProperties storage;
 
-  public JobRetentionService(JdbcTemplate jdbcTemplate) {
+  public JobRetentionService(
+      JdbcTemplate jdbcTemplate,
+      DurableAssetStore durableAssetStore,
+      MediaStorageProperties storage) {
     this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "JdbcTemplate cannot be null");
+    this.durableAssetStore =
+        Objects.requireNonNull(durableAssetStore, "DurableAssetStore cannot be null");
+    this.storage = Objects.requireNonNull(storage, "MediaStorageProperties cannot be null");
+  }
+
+  /** Deletes the durable copy of a job's files; {@code false} when the store refused. */
+  private boolean deleteDurable(String userId, String jobId) {
+    if (!durableAssetStore.enabled() || userId.isEmpty()) {
+      return true;
+    }
+    try {
+      durableAssetStore.delete(AssetKeys.jobPrefix(storage.tenant(), userId, jobId));
+      return true;
+    } catch (IOException | IllegalArgumentException e) {
+      logger.error("Could not delete a purged job's durable copy; its row is kept", e);
+      return false;
+    }
   }
 
   /**
@@ -107,7 +132,10 @@ public class JobRetentionService {
     int returned = 0;
     for (Map.Entry<String, String> tombstone : tombstones) {
       Optional<Path> directory = jobDirectory(uploadRoot, tombstone.getValue(), tombstone.getKey());
-      if (directory.isPresent() && Files.exists(directory.get()) && delete(directory.get())) {
+      if (directory.isPresent()
+          && Files.exists(directory.get())
+          && deleteDurable(tombstone.getValue(), tombstone.getKey())
+          && delete(directory.get())) {
         logger.warn(
             "Job {} was written to after its purge; its directory was deleted again",
             tombstone.getKey());
@@ -136,6 +164,9 @@ public class JobRetentionService {
             + " ON CONFLICT (job_id) DO NOTHING",
         jobId,
         userId.isEmpty() ? null : userId);
+    if (!deleteDurable(userId, jobId)) {
+      return false;
+    }
     Optional<Path> directory = jobDirectory(uploadRoot, userId, jobId);
     if (directory.isPresent() && Files.exists(directory.get()) && !delete(directory.get())) {
       // The row stays: it is the only pointer to what could not be deleted, and the next sweep
