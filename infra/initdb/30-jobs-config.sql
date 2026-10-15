@@ -306,7 +306,8 @@ INSERT INTO ai_providers (name, base_url, api_key) VALUES
 ('ollama', 'http://localhost:11434', NULL),
 ('localai', 'http://localhost:8085', 'not-required'),
 ('localai-video', 'http://localhost:8188', NULL),
-('localai-image', 'http://localhost:8086/v1', 'not-required')
+('localai-image', 'http://localhost:8086/v1', 'not-required'),
+('do-inference', 'https://inference.do-ai.run', 'not-required')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO orazaka_models (model_name, model_label, category, options, provider_name, is_default, max_steps, recommended_fps, supported_hardware) VALUES
@@ -346,6 +347,8 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 -- that is not itself a GPU machine (dev runs on App Platform). recommended_fps is the model's own.
 ('wan2.2-ti2v-5b', 'Wan 2.2 TI2V 5B (9:16, GPU)', 'video', NULL, 'localai-video', FALSE, 40, 24, NULL),
 ('wan2.1-t2v-1.3b', 'Wan 2.1 T2V 1.3B (9:16, GPU)', 'video', NULL, 'localai-video', FALSE, 30, 16, NULL),
+-- Wan 2.2 A14B is made by the provider `do-inference` (DigitalOcean serverless) and run by Orazaka: the media worker routes it (orazaka-worker-media, app/remote_video.py).
+('wan2-2-t2v-a14b', 'Wan 2.2 T2V A14B (serverless)', 'video', NULL, 'do-inference', FALSE, 0, 16, NULL),
 -- Vision Models
 -- The vision DEFAULT is llava, not llama3.2-vision (ADR-042). The latter is the better model and
 -- was the seeded default, but its `mllama` architecture is not supported by the llama-server this
@@ -590,6 +593,7 @@ UPDATE orazaka_models SET description = 'SVD XT in PyTorch MPS float32. Highest 
 UPDATE orazaka_models SET description = 'ByteDance AnimateDiff Lightning weights (MLX). Fast 8-step text-to-video at ~12fps.' WHERE model_name = 'ByteDance/AnimateDiff-Lightning';
 UPDATE orazaka_models SET description = 'Wan 2.2 TI2V 5B (Apache-2.0) — vertical shorts at 704x1280, 5 s at 24 fps, on the GPU host (48 GB). The 9:16 model of the demos.' WHERE model_name = 'wan2.2-ti2v-5b';
 UPDATE orazaka_models SET description = 'Wan 2.1 T2V 1.3B (Apache-2.0) — vertical clips at 480x832, 5 s at 16 fps, on the small GPU host (20 GB). Fast drafts.' WHERE model_name = 'wan2.1-t2v-1.3b';
+UPDATE orazaka_models SET description = 'Wan 2.2 A14B (Apache-2.0) on DigitalOcean serverless inference, routed by Orazaka — text-to-video, 832x480 in 16:9, 5 s at 16 fps, $0.60 a clip, the seed makes the same shot again. The cinematic model of the demos.' WHERE model_name = 'wan2-2-t2v-a14b';
 UPDATE orazaka_models SET description = 'LLaVA multimodal model — describe and answer questions about images.' WHERE model_name = 'llava:latest';
 UPDATE orazaka_models SET description = 'LLaVA v1.6 — improved image understanding and OCR over base LLaVA.' WHERE model_name = 'llava:v1.6';
 UPDATE orazaka_models SET description = 'BakLLaVA (Mistral-based) vision model. Compact image understanding.' WHERE model_name = 'bakllava:latest';
@@ -639,6 +643,7 @@ UPDATE orazaka_models SET vendor = 'Stability AI', family = 'Stable Video Diffus
 UPDATE orazaka_models SET status = 'internal' WHERE model_name = 'stable-video-diffusion-img2vid-xt-mps-fp32';
 UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.2', capabilities = 'video', runs_on = 'local', runtime = 'worker-media · CUDA', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/blob/main/README.md', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2.2-ti2v-5b';
 UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.1', capabilities = 'video', runs_on = 'local', runtime = 'worker-media · CUDA', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/blob/main/README.md', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2.1-t2v-1.3b';
+UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.2', capabilities = 'video', runs_on = 'provider', runtime = 'DigitalOcean serverless inference', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2-2-t2v-a14b';
 
 
 -- ── MCP registry + tool cache/config (router-hosted MCP execution; Phase 4 kept the
