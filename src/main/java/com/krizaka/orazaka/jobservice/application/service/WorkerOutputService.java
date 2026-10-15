@@ -104,6 +104,36 @@ public class WorkerOutputService {
     return url;
   }
 
+  /**
+   * Hands an actor's own output back to a worker that needs it as an input (sound for a video reads
+   * the clip an earlier step made, on a host that does not share the platform's disk).
+   *
+   * <p>Ownership is the job row's: an output of somebody else's job is <em>not found</em>, the same
+   * answer as one that does not exist.
+   *
+   * @param jobId the job that produced it
+   * @param filename its name within the job's output
+   * @param actorId the run's actor ({@code X-Orazaka-User-Id}); must be the job's owner
+   * @return the plaintext bytes, or empty
+   * @throws IllegalArgumentException a malformed id or name — the caller's
+   */
+  public Optional<byte[]> load(String jobId, String filename, String actorId) {
+    if (jobId == null || !JOB_ID.matcher(jobId).matches()) {
+      throw new IllegalArgumentException("malformed job id");
+    }
+    if (filename == null || !FILENAME.matcher(filename).matches() || filename.contains("..")) {
+      throw new IllegalArgumentException("an output name is one word, never a path");
+    }
+    if (isBlank(actorId)) {
+      return Optional.empty();
+    }
+    Optional<JobDto> existing = jobPersistenceProvider.getJob(jobId);
+    if (existing.isEmpty() || !actorId.equals(existing.get().userId())) {
+      return Optional.empty();
+    }
+    return mediaFileStore.read(uploadDir, actorId, jobId, filename);
+  }
+
   private String ownerOf(String jobId, String actorId, String featureKey, String dataClass) {
     Optional<JobDto> existing = jobPersistenceProvider.getJob(jobId);
     if (existing.isPresent()) {

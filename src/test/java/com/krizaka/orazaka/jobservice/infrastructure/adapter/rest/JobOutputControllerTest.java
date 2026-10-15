@@ -59,4 +59,17 @@ class JobOutputControllerTest {
 
     assertThat(controller.image("j-9", "asset-1", "u").getBody()).containsExactly(7);
   }
+
+  @Test
+  @DisplayName("An owner reads its output back: 200 with the bytes; anything else is a 404")
+  void readsBackOrNotFound() {
+    byte[] clip = {1, 2, 3};
+    when(service.load("j-1", "video.mp4", "u")).thenReturn(java.util.Optional.of(clip));
+    when(service.load("j-2", "video.mp4", "u")).thenReturn(java.util.Optional.empty());
+
+    ResponseEntity<byte[]> found = controller.read("j-1", "video.mp4", "u");
+    assertThat(found.getStatusCode().value()).isEqualTo(200);
+    assertThat(found.getBody()).isEqualTo(clip);
+    assertThat(controller.read("j-2", "video.mp4", "u").getStatusCode().value()).isEqualTo(404);
+  }
 }

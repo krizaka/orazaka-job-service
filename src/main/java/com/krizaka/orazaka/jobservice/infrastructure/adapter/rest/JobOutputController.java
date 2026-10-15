@@ -86,6 +86,25 @@ class JobOutputController {
   }
 
   /**
+   * Reads one of the actor's own outputs back (a step whose input is an earlier step's clip).
+   *
+   * @param jobId the job that produced it
+   * @param filename its name within the job's output
+   * @param actorId the run's actor ({@code X-Orazaka-User-Id}), who must own the job
+   * @return {@code 200} with the plaintext, or {@code 404} — also for somebody else's job
+   */
+  @GetMapping("/{jobId}/output/{filename}")
+  ResponseEntity<byte[]> read(
+      @PathVariable String jobId,
+      @PathVariable String filename,
+      @RequestHeader(name = "X-Orazaka-User-Id", required = false) String actorId) {
+    return workerOutputService
+        .load(jobId, filename, actorId)
+        .map(data -> ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).body(data))
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  /**
    * A malformed hand-over is the worker's to fix: {@code 400} with the reason.
    *
    * @param refused the reason
