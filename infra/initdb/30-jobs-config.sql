@@ -307,7 +307,9 @@ INSERT INTO ai_providers (name, base_url, api_key) VALUES
 ('localai', 'http://localhost:8085', 'not-required'),
 ('localai-video', 'http://localhost:8188', NULL),
 ('localai-image', 'http://localhost:8086/v1', 'not-required'),
-('do-inference', 'https://inference.do-ai.run', 'not-required')
+('do-inference', 'https://inference.do-ai.run', 'not-required'),
+-- The image client of Spring AI appends /images/generations to the base URL (the local sd-server's is .../v1): the same endpoint as do-inference, with the /v1.
+('do-inference-images', 'https://inference.do-ai.run/v1', 'not-required')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO orazaka_models (model_name, model_label, category, options, provider_name, is_default, max_steps, recommended_fps, supported_hardware) VALUES
@@ -332,7 +334,7 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('z-image-turbo', 'Z-Image Turbo', 'image', NULL, 'localai-image', FALSE, 8, NULL, NULL),
 ('v1-5-pruned-emaonly', 'Stable Diffusion 1.5', 'image', NULL, 'localai-image', FALSE, 20, NULL, NULL),
 -- Hosted: Stable Diffusion 3.5 Large on DigitalOcean serverless inference ($0.08 an image), routed by Orazaka — no declared steps (ImageGeneratorClientImpl).
-('stable-diffusion-3.5-large', 'Stable Diffusion 3.5 Large (DigitalOcean)', 'image', NULL, 'do-inference', FALSE, NULL, NULL, NULL),
+('stable-diffusion-3.5-large', 'Stable Diffusion 3.5 Large (DigitalOcean)', 'image', NULL, 'do-inference-images', FALSE, NULL, NULL, NULL),
 -- Video Models
 -- SVD-XT is HEAVY (needs >64GB unified memory); kept in the catalog but NOT the default.
 -- The worker's memory preflight fails it cleanly on a 64GB Mac (§12: honest failure).
