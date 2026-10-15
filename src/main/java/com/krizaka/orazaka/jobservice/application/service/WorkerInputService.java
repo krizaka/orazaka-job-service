@@ -1,6 +1,7 @@
 package com.krizaka.orazaka.jobservice.application.service;
 
 import com.krizaka.orazaka.assets.application.service.EncryptedAssetService;
+import com.krizaka.orazaka.jobservice.infrastructure.support.AssetFileResolver;
 import com.krizaka.orazaka.jobservice.infrastructure.support.PathResolver;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -87,6 +88,41 @@ public class WorkerInputService {
       return Optional.of(bytes);
     } catch (IOException unreadable) {
       logger.warn("Starting image of job {} unreadable: {}", jobId, unreadable.getMessage());
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * A photo the actor uploaded, by its asset id, in the clear.
+   *
+   * <p>A Studio step that animates a photo is dispatched straight to the worker, so no job input is
+   * archived and the id is never resolved to a path: the worker names the asset it was given and
+   * this service resolves it against the actor's own files, exactly as {@link AssetFileResolver}
+   * does for every other capability (ownership is the path; another actor's id is "not found").
+   *
+   * @param userId the run's actor
+   * @param assetId the asset id (a UUID)
+   * @return the image bytes, or empty when this actor has no such readable asset
+   * @throws IllegalArgumentException a malformed actor id
+   */
+  public Optional<byte[]> uploadedImage(String userId, String assetId) {
+    if (userId == null || !ID.matcher(userId).matches()) {
+      throw new IllegalArgumentException("malformed actor id");
+    }
+    if (assetId == null || !ID.matcher(assetId).matches()) {
+      throw new IllegalArgumentException("malformed asset id");
+    }
+    try {
+      Optional<java.io.File> file =
+          AssetFileResolver.resolve(PathResolver.resolveToString(uploadDir), userId, assetId);
+      if (file.isEmpty() || file.get().length() > MAX_BYTES) {
+        return Optional.empty();
+      }
+      byte[] bytes = encryptedAssetService.readAllBytes(file.get().toPath(), true);
+      logger.info("Handed {} bytes of an uploaded image to a worker", bytes.length);
+      return Optional.of(bytes);
+    } catch (IOException unreadable) {
+      logger.warn("Uploaded image unreadable: {}", unreadable.getMessage());
       return Optional.empty();
     }
   }

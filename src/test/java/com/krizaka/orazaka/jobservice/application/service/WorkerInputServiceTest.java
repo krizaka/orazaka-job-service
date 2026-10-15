@@ -91,4 +91,20 @@ class WorkerInputServiceTest {
     assertThatThrownBy(() -> service().startingImage(JOB, null))
         .isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  @DisplayName("An uploaded asset is found by id in its actor's own files, and in nobody else's")
+  void uploadedAssetByIdIsOwnerOnly() throws IOException {
+    String id = "11111111-1111-1111-1111-111111111111";
+    Path file = photo("user-1", id + ".jpg");
+    photo("user-2", "22222222-2222-2222-2222-222222222222.jpg");
+
+    assertThat(service().uploadedImage("user-1", id)).contains(PHOTO);
+    assertThat(service().uploadedImage("user-2", id)).isEmpty();
+    assertThat(file).exists();
+    assertThatThrownBy(() -> service().uploadedImage("../user-2", id))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> service().uploadedImage("user-1", "../x"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }

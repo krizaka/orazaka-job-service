@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -71,9 +72,13 @@ class JobOutputController {
   @GetMapping("/{jobId}/input/image")
   ResponseEntity<byte[]> image(
       @PathVariable String jobId,
+      @RequestParam(name = "asset", required = false) String assetId,
       @RequestHeader(name = "X-Orazaka-User-Id", required = false) String actorId) {
-    return workerInputService
-        .startingImage(jobId, actorId)
+    // A Studio step reaches the worker without passing the listener: it names the asset it was
+    // given. A job the listener archived is found by its own input.
+    return (assetId != null && !assetId.isBlank()
+            ? workerInputService.uploadedImage(actorId, assetId)
+            : workerInputService.startingImage(jobId, actorId))
         .map(
             bytes ->
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).body(bytes))

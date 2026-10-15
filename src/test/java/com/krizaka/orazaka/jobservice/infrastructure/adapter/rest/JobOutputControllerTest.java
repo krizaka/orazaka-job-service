@@ -48,7 +48,15 @@ class JobOutputControllerTest {
     when(input.startingImage("j-1", "u")).thenReturn(Optional.of(new byte[] {9, 9}));
     when(input.startingImage("j-2", "u")).thenReturn(Optional.empty());
 
-    assertThat(controller.image("j-1", "u").getBody()).containsExactly(9, 9);
-    assertThat(controller.image("j-2", "u").getStatusCode().value()).isEqualTo(404);
+    assertThat(controller.image("j-1", null, "u").getBody()).containsExactly(9, 9);
+    assertThat(controller.image("j-2", null, "u").getStatusCode().value()).isEqualTo(404);
+  }
+
+  @Test
+  @DisplayName("A Studio step names the uploaded asset: it is resolved for the actor, not by job")
+  void handsOverAnUploadedAsset() {
+    when(input.uploadedImage("u", "asset-1")).thenReturn(Optional.of(new byte[] {7}));
+
+    assertThat(controller.image("j-9", "asset-1", "u").getBody()).containsExactly(7);
   }
 }
