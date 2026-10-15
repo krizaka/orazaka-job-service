@@ -1,11 +1,14 @@
 package com.krizaka.orazaka.jobservice.infrastructure.adapter.rest;
 
+import com.krizaka.orazaka.jobservice.application.service.WorkerInputService;
 import com.krizaka.orazaka.jobservice.application.service.WorkerOutputService;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,8 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 class JobOutputController {
 
   private final WorkerOutputService workerOutputService;
+  private final WorkerInputService workerInputService;
 
-  JobOutputController(WorkerOutputService workerOutputService) {
+  JobOutputController(
+      WorkerOutputService workerOutputService, WorkerInputService workerInputService) {
+    this.workerInputService =
+        Objects.requireNonNull(workerInputService, "WorkerInputService cannot be null");
     this.workerOutputService =
         Objects.requireNonNull(workerOutputService, "WorkerOutputService cannot be null");
   }
@@ -51,6 +58,26 @@ class JobOutputController {
       @RequestHeader(name = "X-Orazaka-Data-Class", required = false) String dataClass) {
     String url = workerOutputService.store(jobId, filename, data, actorId, featureKey, dataClass);
     return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", url));
+  }
+
+  /**
+   * The starting image of a job, for a worker that does not share the platform's disk.
+   *
+   * @param jobId the job the worker was sent
+   * @param actorId the run's actor ({@code X-Orazaka-User-Id}); the image is read only from its
+   *     files
+   * @return {@code 200} with the image bytes, {@code 404} when this actor's job names none
+   */
+  @GetMapping("/{jobId}/input/image")
+  ResponseEntity<byte[]> image(
+      @PathVariable String jobId,
+      @RequestHeader(name = "X-Orazaka-User-Id", required = false) String actorId) {
+    return workerInputService
+        .startingImage(jobId, actorId)
+        .map(
+            bytes ->
+                ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).body(bytes))
+        .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   /**
