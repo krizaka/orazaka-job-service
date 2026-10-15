@@ -33,7 +33,14 @@ class SpeechSynthesisStrategyTest {
   void setUp() {
     strategy =
         new SpeechSynthesisStrategy(
-            aiClient, modelResolver, new MediaFileStore(testAssets()), tempDir.toString());
+            aiClient,
+            modelResolver,
+            new MediaFileStore(
+                testAssets(),
+                new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
+                new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                    "local", null, null, "storage.bunnycdn.com", null, "default")),
+            tempDir.toString());
     lenient()
         .when(modelResolver.resolve(any(), eq("speech"), any()))
         .thenReturn("piper-en-medium-ryan");
