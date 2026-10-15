@@ -54,7 +54,8 @@ public final class SpeechSynthesisStrategy implements JobExecutor {
     // run failed. The
     // payload's own model wins, then the sentinel reads as "none" and the catalogue's speech
     // default applies.
-    String model = modelResolver.resolve(message.resolvedModel(), "speech", "piper-en-medium-ljspeech");
+    String model =
+        modelResolver.resolve(message.resolvedModel(), "speech", "piper-en-medium-ljspeech");
     String voice = message.voice();
 
     AudioRequest audioRequest =
