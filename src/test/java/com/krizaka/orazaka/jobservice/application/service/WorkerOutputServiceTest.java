@@ -98,4 +98,38 @@ class WorkerOutputServiceTest {
     assertThatThrownBy(() -> service.store(JOB, "video.mp4", CLIP, "u", "f", "STANDARD"))
         .isInstanceOf(IllegalStateException.class);
   }
+
+  @Test
+  @DisplayName("An actor reads back the output of a job it owns")
+  void loadsTheOwnersOutput() {
+    JobDto owned = row("owner-7");
+    when(jobs.getJob(JOB)).thenReturn(Optional.of(owned));
+    when(store.read("/srv/uploads", "owner-7", JOB, "video.mp4")).thenReturn(Optional.of(CLIP));
+
+    assertThat(service.load(JOB, "video.mp4", "owner-7")).contains(CLIP);
+  }
+
+  @Test
+  @DisplayName("Another actor's output is not found: same answer as one that does not exist")
+  void anotherActorsOutputIsNotFound() {
+    JobDto owned = row("owner-7");
+    when(jobs.getJob(JOB)).thenReturn(Optional.of(owned));
+
+    assertThat(service.load(JOB, "video.mp4", "intruder")).isEmpty();
+    assertThat(service.load(JOB, "video.mp4", "")).isEmpty();
+    assertThat(service.load(JOB, "video.mp4", null)).isEmpty();
+    verify(store, never()).read(anyString(), anyString(), anyString(), anyString());
+  }
+
+  @Test
+  @DisplayName("A job without a row has nothing to read; a path is never an output name")
+  void unknownJobAndPaths() {
+    when(jobs.getJob(JOB)).thenReturn(Optional.empty());
+
+    assertThat(service.load(JOB, "video.mp4", "owner-7")).isEmpty();
+    assertThatThrownBy(() -> service.load(JOB, "../video.mp4", "owner-7"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> service.load("../x", "video.mp4", "owner-7"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }

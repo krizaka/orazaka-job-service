@@ -31,6 +31,31 @@ public class MediaFileStore {
   private static final Logger logger = LoggerFactory.getLogger(MediaFileStore.class);
 
   /**
+   * Reads one stored output back, decrypted, or empty when there is none.
+   *
+   * @param uploadDir the base upload directory
+   * @param userId the owner's id
+   * @param jobId the job that produced it
+   * @param filename the output's name
+   * @return the plaintext bytes
+   */
+  public java.util.Optional<byte[]> read(
+      String uploadDir, String userId, String jobId, String filename) {
+    try {
+      Path root = PathResolver.resolve(uploadDir).toAbsolutePath().normalize();
+      Path filePath =
+          root.resolve(userId).resolve(jobId).resolve("output").resolve(filename).normalize();
+      if (!filePath.startsWith(root) || !Files.isRegularFile(filePath)) {
+        return java.util.Optional.empty();
+      }
+      return java.util.Optional.of(encryptedAssetService.readAllBytes(filePath, false));
+    } catch (IOException e) {
+      logger.error("Failed to read a stored output", e);
+      return java.util.Optional.empty();
+    }
+  }
+
+  /**
    * Saves media bytes to {@code <uploadDir>/<userId>/<jobId>/output/<filename>} and returns the
    * public URL path, or an empty string if the data is null/empty or the write fails.
    *
