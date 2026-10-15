@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.krizaka.orazaka.jobservice.application.service.WorkerInputService;
 import com.krizaka.orazaka.jobservice.application.service.WorkerOutputService;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +15,8 @@ import org.springframework.http.ResponseEntity;
 class JobOutputControllerTest {
 
   private final WorkerOutputService service = mock(WorkerOutputService.class);
-  private final JobOutputController controller = new JobOutputController(service);
+  private final WorkerInputService input = mock(WorkerInputService.class);
+  private final JobOutputController controller = new JobOutputController(service, input);
 
   @Test
   @DisplayName("A stored output answers 201 with the URL the asset route serves")
@@ -37,5 +40,15 @@ class JobOutputControllerTest {
 
     assertThat(response.getStatusCode().value()).isEqualTo(400);
     assertThat(response.getBody()).containsEntry("error", "an output name is one word");
+  }
+
+  @Test
+  @DisplayName("A job's starting image is handed over, and 404 when the actor's job names none")
+  void handsOverTheStartingImage() {
+    when(input.startingImage("j-1", "u")).thenReturn(Optional.of(new byte[] {9, 9}));
+    when(input.startingImage("j-2", "u")).thenReturn(Optional.empty());
+
+    assertThat(controller.image("j-1", "u").getBody()).containsExactly(9, 9);
+    assertThat(controller.image("j-2", "u").getStatusCode().value()).isEqualTo(404);
   }
 }
