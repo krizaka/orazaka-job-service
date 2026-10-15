@@ -331,6 +331,8 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('flux-2-klein-4b', 'FLUX.2 [klein] 4B', 'image', NULL, 'localai-image', TRUE, 4, NULL, NULL),
 ('z-image-turbo', 'Z-Image Turbo', 'image', NULL, 'localai-image', FALSE, 8, NULL, NULL),
 ('v1-5-pruned-emaonly', 'Stable Diffusion 1.5', 'image', NULL, 'localai-image', FALSE, 20, NULL, NULL),
+-- Hosted: Stable Diffusion 3.5 Large on DigitalOcean serverless inference ($0.08 an image), routed by Orazaka — no declared steps (ImageGeneratorClientImpl).
+('stable-diffusion-3.5-large', 'Stable Diffusion 3.5 Large (DigitalOcean)', 'image', NULL, 'do-inference', FALSE, NULL, NULL, NULL),
 -- Video Models
 -- SVD-XT is HEAVY (needs >64GB unified memory); kept in the catalog but NOT the default.
 -- The worker's memory preflight fails it cleanly on a 64GB Mac (§12: honest failure).
@@ -594,6 +596,7 @@ UPDATE orazaka_models SET description = 'ByteDance AnimateDiff Lightning weights
 UPDATE orazaka_models SET description = 'Wan 2.2 TI2V 5B (Apache-2.0) — vertical shorts at 704x1280, 5 s at 24 fps, on the GPU host (48 GB). The 9:16 model of the demos.' WHERE model_name = 'wan2.2-ti2v-5b';
 UPDATE orazaka_models SET description = 'Wan 2.1 T2V 1.3B (Apache-2.0) — vertical clips at 480x832, 5 s at 16 fps, on the small GPU host (20 GB). Fast drafts.' WHERE model_name = 'wan2.1-t2v-1.3b';
 UPDATE orazaka_models SET description = 'Wan 2.2 A14B (Apache-2.0) on DigitalOcean serverless inference, routed by Orazaka — text-to-video, 832x480 in 16:9, 5 s at 16 fps, $0.60 a clip, the seed makes the same shot again. The cinematic model of the demos.' WHERE model_name = 'wan2-2-t2v-a14b';
+UPDATE orazaka_models SET description = 'Stable Diffusion 3.5 Large (Stability AI Community Licence) on DigitalOcean serverless inference, routed by Orazaka — $0.08 an image, 1024x1024, the seed is not honoured by the provider.' WHERE model_name = 'stable-diffusion-3.5-large';
 UPDATE orazaka_models SET description = 'LLaVA multimodal model — describe and answer questions about images.' WHERE model_name = 'llava:latest';
 UPDATE orazaka_models SET description = 'LLaVA v1.6 — improved image understanding and OCR over base LLaVA.' WHERE model_name = 'llava:v1.6';
 UPDATE orazaka_models SET description = 'BakLLaVA (Mistral-based) vision model. Compact image understanding.' WHERE model_name = 'bakllava:latest';
@@ -642,6 +645,7 @@ UPDATE orazaka_models SET status = 'internal' WHERE model_name = 'apple-coreml-v
 UPDATE orazaka_models SET vendor = 'Stability AI', family = 'Stable Video Diffusion', capabilities = 'video', runs_on = 'local', runtime = 'CUDA, more than 64 GB of memory', open_weights = TRUE, licence = 'Stability AI Community Licence', licence_url = 'https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/blob/main/LICENSE.md', commercial_use = 'conditions', context_window = NULL, status = 'available' WHERE model_name = 'stable-video-diffusion-img2vid-xt';
 UPDATE orazaka_models SET status = 'internal' WHERE model_name = 'stable-video-diffusion-img2vid-xt-mps-fp32';
 UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.2', capabilities = 'video', runs_on = 'local', runtime = 'worker-media · CUDA', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/blob/main/README.md', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2.2-ti2v-5b';
+UPDATE orazaka_models SET vendor = 'Stability AI', family = 'Stable Diffusion 3.5', capabilities = 'image', runs_on = 'provider', runtime = 'DigitalOcean serverless inference', open_weights = TRUE, licence = 'Stability AI Community Licence', licence_url = 'https://stability.ai/license', commercial_use = 'conditions', context_window = NULL, status = 'available' WHERE model_name = 'stable-diffusion-3.5-large';
 UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.1', capabilities = 'video', runs_on = 'local', runtime = 'worker-media · CUDA', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/blob/main/README.md', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2.1-t2v-1.3b';
 UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.2', capabilities = 'video', runs_on = 'provider', runtime = 'DigitalOcean serverless inference', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2-2-t2v-a14b';
 
