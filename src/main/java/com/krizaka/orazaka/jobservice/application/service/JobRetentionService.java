@@ -200,8 +200,8 @@ public class JobRetentionService {
   private static boolean isSegment(String value) {
     return value != null
         && !value.isBlank()
-        && !value.equals(".")
-        && !value.equals("..")
+        && !".".equals(value)
+        && !"..".equals(value)
         && value.indexOf('/') < 0
         && value.indexOf('\\') < 0;
   }

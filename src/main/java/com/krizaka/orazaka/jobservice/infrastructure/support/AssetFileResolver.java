@@ -158,7 +158,7 @@ public final class AssetFileResolver {
     // A regular file, never a directory. Output is written to {uploadDir}/{userId}/{jobId}/, so
     // without this a job id resolves to its own output directory and travels on as if it were an
     // uploaded asset.
-    return (matches[0].isFile() && withinOwnerRoot(matches[0], ownerRoot))
+    return matches[0].isFile() && withinOwnerRoot(matches[0], ownerRoot)
         ? Optional.of(matches[0])
         : Optional.empty();
   }

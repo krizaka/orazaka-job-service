@@ -1,6 +1,7 @@
 package com.krizaka.orazaka.jobservice.infrastructure.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.krizaka.orazaka.assets.application.service.EncryptedAssetService;
 import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
@@ -41,25 +42,28 @@ class MediaFileStoreDurableTest {
 
   @Test
   void whenTheDurableCopyFailsTheSaveFailsByName_notReportedStored() {
-    DurableAssetStore broken =
-        new DurableAssetStore() {
-          public boolean enabled() {
-            return true;
-          }
+    assertDoesNotThrow(
+        () -> {
+          DurableAssetStore broken =
+              new DurableAssetStore() {
+                public boolean enabled() {
+                  return true;
+                }
 
-          public void put(String key, Path file) throws IOException {
-            throw new IOException("durable store refused PUT: HTTP 401");
-          }
+                public void put(String key, Path file) throws IOException {
+                  throw new IOException("durable store refused PUT: HTTP 401");
+                }
 
-          public boolean fetch(String key, Path target) {
-            return false;
-          }
+                public boolean fetch(String key, Path target) {
+                  return false;
+                }
 
-          public void delete(String key) {}
-        };
-    MediaMissing.assertEmpty(
-        new MediaFileStore(assets, broken, TENANT)
-            .save(work.resolve("uploads").toString(), "u1", "j1", pngBytes(), "image.png"));
+                public void delete(String key) {}
+              };
+          MediaMissing.assertEmpty(
+              new MediaFileStore(assets, broken, TENANT)
+                  .save(work.resolve("uploads").toString(), "u1", "j1", pngBytes(), "image.png"));
+        });
   }
 
   @Test

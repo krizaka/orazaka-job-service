@@ -1,5 +1,7 @@
 package com.krizaka.orazaka.jobservice.architecture;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 import com.krizaka.orazaka.persistence.infrastructure.config.MessagingContract;
 import com.krizaka.orazaka.test.architecture.ConfigBindingRules;
 import com.krizaka.orazaka.test.architecture.GovernanceRules;
@@ -55,50 +57,71 @@ class JobServiceGovernanceTest {
   @Test
   @DisplayName("[DOOR-001] no inbound HTTP entry dispatches a job")
   void noInboundEntryDispatchesAJob() {
-    RunSurfaceRules.assertNoInboundEntryDispatchesAJob();
+    assertDoesNotThrow(
+        () -> {
+          RunSurfaceRules.assertNoInboundEntryDispatchesAJob();
+        });
   }
 
   @Test
   @DisplayName("[LANE-001] every capability declares the lane its routing key feeds")
   void everyCapabilityDeclaresItsLane() {
-    // Asserted here because this service owns the two lanes and their consumers (ADR-067). The
-    // bindings come from MessagingContract rather than being retyped: a rule holding its own copy
-    // of the topology checks a second opinion about it, which is how PUBLISHED_FIELDS came to say
-    // a capability publishes a field it never did.
-    LaneCoherenceRules.assertEveryCapabilityDeclaresItsLane(
-        REPOSITORY_ROOT,
-        java.util.Map.of(
-            "INTERACTIVE",
-            java.util.List.of(
-                MessagingContract.JOBS_INTERACTIVE_TEXT_BINDING,
-                MessagingContract.JOBS_INTERACTIVE_MEDIA_BINDING),
-            "BATCH",
-            java.util.List.of(MessagingContract.JOBS_BATCH_BINDING)));
+    assertDoesNotThrow(
+        () -> {
+          // Asserted here because this service owns the two lanes and their consumers (ADR-067).
+          // The
+          // bindings come from MessagingContract rather than being retyped: a rule holding its own
+          // copy
+          // of the topology checks a second opinion about it, which is how PUBLISHED_FIELDS came to
+          // say
+          // a capability publishes a field it never did.
+          LaneCoherenceRules.assertEveryCapabilityDeclaresItsLane(
+              REPOSITORY_ROOT,
+              java.util.Map.of(
+                  "INTERACTIVE",
+                  java.util.List.of(
+                      MessagingContract.JOBS_INTERACTIVE_TEXT_BINDING,
+                      MessagingContract.JOBS_INTERACTIVE_MEDIA_BINDING),
+                  "BATCH",
+                  java.util.List.of(MessagingContract.JOBS_BATCH_BINDING)));
+        });
   }
 
   @Test
   @DisplayName("[SEAM-002] job-service depends on no foreign Tier-3 implementation")
   void dependsOnNoForeignTier3() {
-    GovernanceRules.assertNoForeignTier3Dependency(productionClasses, BASE_PACKAGE);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoForeignTier3Dependency(productionClasses, BASE_PACKAGE);
+        });
   }
 
   @Test
   @DisplayName("[ERR-103] one top-level type per file")
   void oneTopLevelClassPerFile() {
-    GovernanceRules.assertOneTopLevelClassPerFile(productionClasses, BASE_PACKAGE);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertOneTopLevelClassPerFile(productionClasses, BASE_PACKAGE);
+        });
   }
 
   @Test
   @DisplayName("[ERR-104] no class carries the Orazaka prefix")
   void noRedundantPrefix() {
-    GovernanceRules.assertNoRedundantPrefix(productionClasses, BASE_PACKAGE);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoRedundantPrefix(productionClasses, BASE_PACKAGE);
+        });
   }
 
   @Test
   @DisplayName("[ERR-129] application/service holds only services")
   void servicePackageHoldsOnlyServices() {
-    GovernanceRules.assertServicePackageOnlyServices(
-        productionClasses, BASE_PACKAGE + ".application.service");
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertServicePackageOnlyServices(
+              productionClasses, BASE_PACKAGE + ".application.service");
+        });
   }
 
   // GOV-006: [ERR-130] "domain holds no transport DTOs" is not invoked here: this service has no
@@ -108,112 +131,166 @@ class JobServiceGovernanceTest {
   @Test
   @DisplayName("[AGENTS.md §4] constructor injection only")
   void noFieldInjection() {
-    GovernanceRules.assertNoFieldInjection(productionClasses, BASE_PACKAGE);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoFieldInjection(productionClasses, BASE_PACKAGE);
+        });
   }
 
   @Test
   @DisplayName("[AGENTS.md §4] no System.out / System.err in production code")
   void noStandardStreams() {
-    GovernanceRules.assertNoStandardStreams(productionClasses);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoStandardStreams(productionClasses);
+        });
   }
 
   @Test
   @DisplayName("[ADR-035] no SecurityConfig opens /internal/** or /uploads/**")
   void internalAndMediaSurfacesStayAuthenticated() {
-    GovernanceRules.assertNoPermitAllOnInternalOrUploads(
-        Path.of(System.getProperty("user.dir"), "src", "main", "java"));
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoPermitAllOnInternalOrUploads(
+              Path.of(System.getProperty("user.dir"), "src", "main", "java"));
+        });
   }
 
   @Test
   @DisplayName("[ADR-035] /internal/v1 demands the SERVICE authority, not merely authentication")
   void internalSurfaceDemandsServiceAuthority() {
-    GovernanceRules.assertInternalSurfaceRequiresServiceAuthority(
-        Path.of(System.getProperty("user.dir"), "src", "main", "java"));
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertInternalSurfaceRequiresServiceAuthority(
+              Path.of(System.getProperty("user.dir"), "src", "main", "java"));
+        });
   }
 
   @Test
   @DisplayName("[AGENTS.md §4] requests run on virtual threads")
   void requestsRunOnVirtualThreads() {
-    GovernanceRules.assertVirtualThreadsEnabled(Path.of(System.getProperty("user.dir")));
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertVirtualThreadsEnabled(Path.of(System.getProperty("user.dir")));
+        });
   }
 
   @Test
   @DisplayName("[PACK-002] no pack, studio or pack-capability key is a literal in engine code")
   void noPackKeyLiteralsInEngineCode() {
-    GovernanceRules.assertNoPackKeyLiterals(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoPackKeyLiterals(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[PACK-003] engine code never branches on a pack identifier")
   void noPackKeyConditionalsInEngineCode() {
-    GovernanceRules.assertNoPackKeyConditionals(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoPackKeyConditionals(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[EXEC-001] every in-process capability's handler_key has an executor")
   void everyCapabilityHasAnExecutor() {
-    GovernanceRules.assertEveryCapabilityHasAnExecutor(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertEveryCapabilityHasAnExecutor(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[EXEC-002] every capability's routing_key is drained by a declared worker")
   void everyCapabilityIsDrained() {
-    GovernanceRules.assertEveryCapabilityIsDrained(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertEveryCapabilityIsDrained(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[CAP-001] one record models a capability; the rest are narrow projections")
   void oneCapabilityModel() {
-    GovernanceRules.assertOneCapabilityModel(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertOneCapabilityModel(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[CAP-002] the endpoint rule has one author")
   void endpointRuleHasOneAuthor() {
-    GovernanceRules.assertEndpointRuleHasOneAuthor(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertEndpointRuleHasOneAuthor(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[KIT-001] every service's filter chain starts from the one security baseline")
   void securityBaselineIsUniform() {
-    GovernanceRules.assertSecurityBaselineIsUniform(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertSecurityBaselineIsUniform(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[KIT-002] dedup has one author: krizaka-messaging")
   void dedupIsAtomic() {
-    GovernanceRules.assertDedupIsAtomic(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertDedupIsAtomic(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[KIT-003] outbox stores claim what they hand the one relay")
   void outboxRelaysClaim() {
-    GovernanceRules.assertOutboxRelaysClaim(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertOutboxRelaysClaim(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[KIT-004] session-token security has one author: krizaka-security")
   void sessionSecurityHasOneAuthor() {
-    GovernanceRules.assertSessionSecurityHasOneAuthor(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertSessionSecurityHasOneAuthor(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName(
       "[CFG-001] every type the configuration binder builds has a constructor it can choose")
   void configurationBindsUnambiguously() {
-    ConfigBindingRules.assertConfigurationBindsUnambiguously();
-    ConfigBindingRules.assertInjectableComponentsHaveOneConstructor();
+    assertDoesNotThrow(
+        () -> {
+          ConfigBindingRules.assertConfigurationBindsUnambiguously();
+          ConfigBindingRules.assertInjectableComponentsHaveOneConstructor();
+        });
   }
 
   @Test
   @DisplayName("[ERR-113] No Environment injection in production beans")
   void noEnvironmentInjection() {
-    SourceFileScanner.assertNoEnvironmentInjection(Path.of("src", "main", "java"));
+    assertDoesNotThrow(
+        () -> {
+          SourceFileScanner.assertNoEnvironmentInjection(Path.of("src", "main", "java"));
+        });
   }
 
   /** [LOG-001] no logging call takes a prompt, a response body or a message text (ADR-064). */
   @Test
   void noLoggingCallTakesContent() {
-    LoggedContentRules.assertNoLoggingCallTakesContent();
+    assertDoesNotThrow(
+        () -> {
+          LoggedContentRules.assertNoLoggingCallTakesContent();
+        });
   }
 }
