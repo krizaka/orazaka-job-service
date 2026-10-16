@@ -40,7 +40,7 @@ class AudioAnalysisStrategyTest {
         .thenAnswer(
             call -> {
               String requested = call.getArgument(0);
-              return (requested == null || requested.isBlank()) ? "whisper-base" : requested;
+              return requested == null || requested.isBlank() ? "whisper-base" : requested;
             });
     strategy =
         new AudioAnalysisStrategy(audioPreProcessor, modelResolver, assets, testEncryption());

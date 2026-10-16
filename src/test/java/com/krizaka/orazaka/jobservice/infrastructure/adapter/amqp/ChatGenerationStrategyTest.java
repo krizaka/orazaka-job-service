@@ -1,7 +1,6 @@
 package com.krizaka.orazaka.jobservice.infrastructure.adapter.amqp;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 import com.krizaka.orazaka.core.domain.model.chat.ChatRequest;

@@ -94,7 +94,7 @@ class AssetFileResolverTest {
 
     List<?> photos = (List<?>) resolved.get("photos");
     assertThat(photos.get(1)).isEqualTo(theirs);
-    assertThat(new File(String.valueOf(photos.get(0)))).isAbsolute().exists();
+    assertThat(new File(String.valueOf(photos.getFirst()))).isAbsolute().exists();
   }
 
   @Test

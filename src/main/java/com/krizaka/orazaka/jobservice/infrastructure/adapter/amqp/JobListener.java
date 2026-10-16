@@ -8,6 +8,7 @@ import com.krizaka.billing.domain.port.UnmeteredTurnRepository;
 import com.krizaka.messaging.dedup.MessageDedup;
 import com.krizaka.orazaka.assets.application.service.EncryptedAssetService;
 import com.krizaka.orazaka.core.application.pipeline.PipelineShortCircuitException;
+import com.krizaka.orazaka.core.domain.model.Authority;
 import com.krizaka.orazaka.core.domain.model.Context;
 import com.krizaka.orazaka.jobs.domain.exception.JobExecutionException;
 import com.krizaka.orazaka.jobs.domain.model.CapabilityDeclaration;
@@ -31,7 +32,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -645,7 +645,7 @@ public class JobListener {
         context.conversationId(),
         context.preferences(),
         context.authorities().stream()
-            .map(a -> a.name())
+            .map(Authority::name)
             .collect(java.util.stream.Collectors.toSet()));
   }
 
@@ -771,7 +771,7 @@ public class JobListener {
     }
     try {
       Path inputDir =
-          Paths.get(uploadDirProperty, userId, jobId, "input").toAbsolutePath().normalize();
+          Path.of(uploadDirProperty, userId, jobId, "input").toAbsolutePath().normalize();
       Files.createDirectories(inputDir);
       Path inputJsonPath = inputDir.resolve("input.json");
       byte[] jsonBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(payload);
@@ -849,7 +849,7 @@ public class JobListener {
     }
     try {
       Path outputDir =
-          Paths.get(uploadDirProperty, userId, jobId, "output").toAbsolutePath().normalize();
+          Path.of(uploadDirProperty, userId, jobId, "output").toAbsolutePath().normalize();
       Files.createDirectories(outputDir);
       Path outputJsonPath = outputDir.resolve("result.json");
       byte[] jsonBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(result);

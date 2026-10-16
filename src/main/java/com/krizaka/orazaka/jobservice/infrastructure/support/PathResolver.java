@@ -2,7 +2,6 @@ package com.krizaka.orazaka.jobservice.infrastructure.support;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * Helper to resolve paths relative to the monorepo root directory, preventing the creation of
@@ -20,8 +19,8 @@ public final class PathResolver {
    * @return absolute, normalized Path matching root directory scope
    */
   public static Path resolve(String path) {
-    Path current = Paths.get(".").toAbsolutePath().normalize();
-    Path target = Paths.get(path);
+    Path current = Path.of(".").toAbsolutePath().normalize();
+    Path target = Path.of(path);
     if (!target.isAbsolute()) {
       Path root = current;
       while (root != null && !Files.exists(root.resolve("AGENTS.md"))) {

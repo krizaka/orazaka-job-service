@@ -930,9 +930,9 @@ class JobListenerTest {
         null);
 
     assertEquals(1, recordedTurns.size(), "a free turn must be recorded, not shrugged off");
-    assertEquals("corr-46", recordedTurns.get(0).correlationId());
-    assertEquals(userId, recordedTurns.get(0).actorId());
-    assertTrue(recordedTurns.get(0).reason().contains("AUDIO_MINUTE"));
+    assertEquals("corr-46", recordedTurns.getFirst().correlationId());
+    assertEquals(userId, recordedTurns.getFirst().actorId());
+    assertTrue(recordedTurns.getFirst().reason().contains("AUDIO_MINUTE"));
   }
 
   @Test
