@@ -85,6 +85,39 @@ public class JobEventPublisher {
         MessagingContract.EVENTS_EXCHANGE, "job." + jobId + ".error", payload);
   }
 
+  /**
+   * Emits the terminal event of a job its owner stopped. Never billed: the reservation is carried
+   * so billing releases it, like a failure, and the relay marks the row CANCELLED.
+   *
+   * @param jobId the cancelled job
+   * @param holdId the reservation to release, or {@code null} when the job was not metered
+   */
+  public void emitCancelled(String jobId, String holdId) {
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("jobId", jobId);
+    putReservation(payload, holdId);
+    rabbitTemplate.convertAndSend(
+        MessagingContract.EVENTS_EXCHANGE, "job." + jobId + ".cancelled", payload);
+  }
+
+  /**
+   * Tells the user what the job is doing now (orazaka-web-client#85).
+   *
+   * @param jobId the job
+   * @param progress the percentage, when the executor knows one
+   * @param phase one of loading, generating, encoding, uploading
+   */
+  public void emitProgress(String jobId, int progress, String phase) {
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("jobId", jobId);
+    payload.put("progress", progress);
+    if (phase != null && !phase.isBlank()) {
+      payload.put("phase", phase);
+    }
+    rabbitTemplate.convertAndSend(
+        MessagingContract.EVENTS_EXCHANGE, "job." + jobId + ".progress", payload);
+  }
+
   /** Omits the key entirely when unmetered, so absence — not a null — means "never authorised". */
   private static void putReservation(Map<String, Object> payload, String holdId) {
     if (holdId != null && !holdId.isBlank()) {

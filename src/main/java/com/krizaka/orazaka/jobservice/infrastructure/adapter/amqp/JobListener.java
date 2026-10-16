@@ -70,6 +70,7 @@ public class JobListener {
 
   private static final Logger logger = LoggerFactory.getLogger(JobListener.class);
   private static final String STATUS_FAILED = "FAILED";
+  private static final String STATUS_CANCELLED = "CANCELLED";
   private static final String UNDECLARED_DATA_CLASS = "JOB_DATA_CLASS_UNDECLARED";
 
   /**
@@ -115,6 +116,7 @@ public class JobListener {
   private final MessageDedup messageDedupService;
   private final EncryptedAssetService encryptedAssetService;
   private final UnmeteredTurnRepository unmeteredTurnRepository;
+  private final RunningJobs runningJobs;
 
   /**
    * Constructs the job listener with injected strategies and infrastructure dependencies.
@@ -130,6 +132,7 @@ public class JobListener {
    * @param userDirectoryService Cached HTTP view of the identity service.
    * @param contextService The orchestration-context resolver.
    * @param unmeteredTurnRepository Records a completed job whose unit could not be measured.
+   * @param runningJobs The jobs running here and the ones their owner cancelled.
    */
   public JobListener(
       JobPersistenceProvider jobPersistenceProvider,
@@ -145,7 +148,8 @@ public class JobListener {
       CapabilityManager capabilityManager,
       MessageDedup messageDedupService,
       EncryptedAssetService encryptedAssetService,
-      UnmeteredTurnRepository unmeteredTurnRepository) {
+      UnmeteredTurnRepository unmeteredTurnRepository,
+      RunningJobs runningJobs) {
     this.jobPersistenceProvider =
         Objects.requireNonNull(jobPersistenceProvider, "JobPersistenceProvider cannot be null");
     this.jobEventPublisher =
@@ -184,6 +188,7 @@ public class JobListener {
         Objects.requireNonNull(messageDedupService, "MessageDedup cannot be null");
     this.unmeteredTurnRepository =
         Objects.requireNonNull(unmeteredTurnRepository, "UnmeteredTurnRepository cannot be null");
+    this.runningJobs = Objects.requireNonNull(runningJobs, "RunningJobs cannot be null");
 
     logger.info(
         "Initialized JobListener with {} executors: {}",
@@ -245,8 +250,15 @@ public class JobListener {
       return;
     }
 
+    if (runningJobs.isCancelled(message.jobId())) {
+      // Its owner stopped it while it waited in a lane: nothing is executed, nothing is billed.
+      handleCancelled(message);
+      return;
+    }
+
     adoptIfUnknown(message);
     jobPersistenceProvider.updateJobStatus(message.jobId(), "PROCESSING", null, null);
+    jobEventPublisher.emitProgress(message.jobId(), 0, "generating");
     // Before anything reads the payload: turn an assetId into the filePath the executors need.
     // A producer that dispatches from a blueprint has no upload root to resolve it with, so
     // until this existed no Studio step consuming an uploaded asset could run at all (ADR-042).
@@ -259,7 +271,16 @@ public class JobListener {
       // `resolved`, not `message`: the executors read filePath, and only the resolved command
       // carries it. Passing the original here is what would leave this fix inert.
       CompletableFuture.runAsync(
-              () -> executeJobAsync(resolved, timeoutSeconds), virtualThreadExecutor)
+              () -> {
+                // Bound for the whole execution: a cancel interrupts exactly this thread.
+                runningJobs.bind(resolved.jobId());
+                try {
+                  executeJobAsync(resolved, timeoutSeconds);
+                } finally {
+                  runningJobs.unbind(resolved.jobId());
+                }
+              },
+              virtualThreadExecutor)
           .get(timeoutSeconds, TimeUnit.SECONDS);
 
     } catch (TimeoutException e) {
@@ -268,7 +289,12 @@ public class JobListener {
       Thread.currentThread().interrupt();
       handleInterruption(resolved, e);
     } catch (Exception e) {
-      handleExecutionFailure(resolved, e);
+      if (runningJobs.isCancelled(resolved.jobId())) {
+        // The interrupt that ended the blocked call is the cancel itself, not a defect.
+        handleCancelled(resolved);
+      } else {
+        handleExecutionFailure(resolved, e);
+      }
     }
   }
 
@@ -433,6 +459,15 @@ public class JobListener {
     Map<String, Object> merged = new HashMap<>(context.preferences());
     merged.putAll(namespaced);
     return new Context(context.userId(), context.conversationId(), merged, context.authorities());
+  }
+
+  private void handleCancelled(JobCommand message) {
+    logger.info("Job {} was cancelled by its owner", message.jobId());
+    if (jobPersistenceProvider.getJob(message.jobId()).isPresent()) {
+      jobPersistenceProvider.updateJobStatus(
+          message.jobId(), STATUS_CANCELLED, null, "CANCELLED_BY_OWNER");
+    }
+    jobEventPublisher.emitCancelled(message.jobId(), message.holdId());
   }
 
   private void handleTimeout(JobCommand message, int timeoutSeconds) {
