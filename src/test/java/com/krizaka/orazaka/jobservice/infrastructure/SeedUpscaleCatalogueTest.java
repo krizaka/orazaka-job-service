@@ -49,7 +49,8 @@ class SeedUpscaleCatalogueTest {
   }
 
   @Test
-  @DisplayName("the bake-off winners are model rows: LTX-Video 0.9.8 (landscape, fast) and Wan 2.2 I2V A14B at 40 steps (people)")
+  @DisplayName(
+      "the bake-off winners are model rows: LTX-Video 0.9.8 (landscape, fast) and Wan 2.2 I2V A14B at 40 steps (people)")
   void theBakeOffWinnersAreModelRows() {
     assertThat(SEED)
         .contains(
