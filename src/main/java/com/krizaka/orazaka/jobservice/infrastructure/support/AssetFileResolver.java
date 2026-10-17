@@ -83,8 +83,8 @@ public final class AssetFileResolver {
    * The actor id names one directory under the upload root: no separator, no {@code ..}, no NUL.
    */
   private static boolean isSingleSegment(String userId) {
-    return !userId.equals(".")
-        && !userId.equals("..")
+    return !".".equals(userId)
+        && !"..".equals(userId)
         && userId.indexOf('/') < 0
         && userId.indexOf('\\') < 0
         && userId.indexOf('\0') < 0;
