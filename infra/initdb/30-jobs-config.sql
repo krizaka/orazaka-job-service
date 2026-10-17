@@ -238,9 +238,14 @@ CREATE TABLE orazaka_models (
     commercial_use VARCHAR(12),     -- 'yes' | 'conditions' (a community licence, share-alike, use restrictions) | 'no' (non-commercial)
     context_window INT,             -- tokens, from the model card; NULL when it is not a text model or unknown
     status VARCHAR(16) NOT NULL DEFAULT 'internal',  -- available | planned | internal (in the catalogue, never published)
+    -- What a form's model picker shows beside the name (measured on this setup, docs/measured-runs; the price from
+    -- the provider's rate card). Never typed in a client: the Studio form is built from these columns.
+    typical_seconds INT,            -- typical seconds for one run; NULL while unmeasured
+    price_cents INT,                -- US cents for one run; NULL when free (the operator's own hardware)
     CONSTRAINT ck_models_runs_on CHECK (runs_on IS NULL OR runs_on IN ('local', 'provider')),
     CONSTRAINT ck_models_commercial_use CHECK (commercial_use IS NULL OR commercial_use IN ('yes', 'conditions', 'no')),
     CONSTRAINT ck_models_status CHECK (status IN ('available', 'planned', 'internal')),
+    CONSTRAINT ck_models_measures CHECK ((typical_seconds IS NULL OR typical_seconds >= 0) AND (price_cents IS NULL OR price_cents >= 0)),
     CONSTRAINT ck_models_locale_default_has_locale CHECK (NOT locale_default OR locale IS NOT NULL)
 );
 CREATE UNIQUE INDEX ux_models_locale_default ON orazaka_models (category, locale) WHERE locale_default;
@@ -730,3 +735,11 @@ CREATE TABLE orazaka_tools_cache (
 INSERT INTO platform_tool_configs (tool_id, cache_enabled, cache_ttl_seconds, rag_enabled, chunker_type, source_table) VALUES
 ('searchWeb', TRUE, 3600, TRUE, 'MARKDOWN_CHUNKERS', 'orazaka_tools_rag_source')
 ON CONFLICT (tool_id) DO NOTHING;
+
+-- What the Studio form's model picker shows (command-to-file seconds and price from content/docs/measured-runs.md,
+-- measured 2026-10-15). Models never measured stay NULL: the picker then says nothing rather than guessing.
+UPDATE orazaka_models SET typical_seconds = 62 WHERE model_name = 'flux-2-klein-4b';
+UPDATE orazaka_models SET typical_seconds = 58 WHERE model_name = 'v1-5-pruned-emaonly';
+UPDATE orazaka_models SET typical_seconds = 157 WHERE model_name = 'z-image-turbo';
+UPDATE orazaka_models SET typical_seconds = 8, price_cents = 8 WHERE model_name = 'stable-diffusion-3.5-large';
+UPDATE orazaka_models SET typical_seconds = 131, price_cents = 60 WHERE model_name = 'wan2-2-t2v-a14b';

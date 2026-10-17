@@ -33,7 +33,7 @@ class AudioAnalysisStrategyTest {
   private AudioAnalysisStrategy strategy;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws Exception {
     // Mirrors the real resolver: an explicit model wins, otherwise the catalogue's default.
     org.mockito.Mockito.lenient()
         .when(modelResolver.resolve(any(), any(), any()))

@@ -9,6 +9,7 @@ import com.krizaka.orazaka.core.domain.model.image.ImageResponse;
 import com.krizaka.orazaka.core.domain.ports.inbound.AiClient;
 import com.krizaka.orazaka.jobs.domain.model.JobCommand;
 import com.krizaka.orazaka.jobs.domain.model.JobExecutionContext;
+import com.krizaka.orazaka.jobservice.catalog.ModelResolution;
 import com.krizaka.orazaka.jobservice.infrastructure.support.MediaFileStore;
 import java.nio.file.Path;
 import java.util.Map;
@@ -31,7 +32,7 @@ class ImageGenerationStrategyTest {
   private ImageGenerationStrategy strategy;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws Exception {
     strategy =
         new ImageGenerationStrategy(
             aiClient,
@@ -43,8 +44,27 @@ class ImageGenerationStrategyTest {
                     "local", null, null, "storage.bunnycdn.com", null, "default")),
             tempDir.toString());
     lenient()
-        .when(modelResolver.resolve(any(), eq("image"), any()))
-        .thenReturn("stable-diffusion-xl");
+        .when(modelResolver.resolution(any(), eq("image"), any()))
+        .thenReturn(ModelResolution.of("stable-diffusion-xl"));
+  }
+
+  @Test
+  void execute_whenTheDefaultWasReplaced_reportsTheNoticeWithTheImage() throws Exception {
+    when(modelResolver.resolution(any(), eq("image"), any()))
+        .thenReturn(
+            new ModelResolution(
+                "stable-diffusion-3.5-large", "FLUX is not available right now; SD 3.5 was used."));
+    when(aiClient.image(any(ImageRequest.class)))
+        .thenReturn(new ImageResponse(new byte[] {1, 2, 3, 4}, null, "png"));
+    JobCommand message =
+        new JobCommand("job-9", "user-1", "image.generation", "", Map.of("prompt", "A kitten"));
+    JobExecutionContext context =
+        new JobExecutionContext("u", "c", java.util.Map.of(), java.util.Set.of());
+
+    Map<String, Object> result = strategy.execute(message, context).output();
+
+    assertEquals("stable-diffusion-3.5-large", result.get("model"));
+    assertEquals("FLUX is not available right now; SD 3.5 was used.", result.get("modelNotice"));
   }
 
   @Test
