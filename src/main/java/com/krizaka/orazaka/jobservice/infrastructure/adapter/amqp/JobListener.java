@@ -18,6 +18,7 @@ import com.krizaka.orazaka.jobs.domain.model.JobExecutionContext;
 import com.krizaka.orazaka.jobs.domain.model.JobExecutionResult;
 import com.krizaka.orazaka.jobs.domain.port.JobExecutor;
 import com.krizaka.orazaka.jobservice.application.service.ContextService;
+import com.krizaka.orazaka.jobservice.durable.DurableMirror;
 import com.krizaka.orazaka.jobservice.infrastructure.config.JobsProperties;
 import com.krizaka.orazaka.jobservice.infrastructure.support.AssetFileResolver;
 import com.krizaka.orazaka.jobservice.infrastructure.support.PathResolver;
@@ -115,6 +116,7 @@ public class JobListener {
   private final ContextService contextService;
   private final MessageDedup messageDedupService;
   private final EncryptedAssetService encryptedAssetService;
+  private final DurableMirror durableMirror;
   private final UnmeteredTurnRepository unmeteredTurnRepository;
   private final RunningJobs runningJobs;
 
@@ -149,7 +151,8 @@ public class JobListener {
       MessageDedup messageDedupService,
       EncryptedAssetService encryptedAssetService,
       UnmeteredTurnRepository unmeteredTurnRepository,
-      RunningJobs runningJobs) {
+      RunningJobs runningJobs,
+      DurableMirror durableMirror) {
     this.jobPersistenceProvider =
         Objects.requireNonNull(jobPersistenceProvider, "JobPersistenceProvider cannot be null");
     this.jobEventPublisher =
@@ -189,6 +192,7 @@ public class JobListener {
     this.unmeteredTurnRepository =
         Objects.requireNonNull(unmeteredTurnRepository, "UnmeteredTurnRepository cannot be null");
     this.runningJobs = Objects.requireNonNull(runningJobs, "RunningJobs cannot be null");
+    this.durableMirror = Objects.requireNonNull(durableMirror, "DurableMirror cannot be null");
 
     logger.info(
         "Initialized JobListener with {} executors: {}",
@@ -729,6 +733,12 @@ public class JobListener {
     Map<String, Object> payload = message.payload();
     // Every asset id in the payload, wherever it sits: `assetId` for the single-image capabilities,
     // and list-valued inputs like a composition's `photos` (ADR-046).
+    // A redeploy wipes the disk, not the durable store: bring this actor's own uploads back first.
+    durableMirror.restoreUploadsNamedBy(
+        uploadDirProperty,
+        message.userId(),
+        payload,
+        id -> AssetFileResolver.resolve(uploadDirProperty, message.userId(), id).isPresent());
     Map<String, Object> resolved =
         AssetFileResolver.resolvePayload(uploadDirProperty, message.userId(), payload);
 
@@ -782,6 +792,10 @@ public class JobListener {
     }
     Optional<File> asset = AssetFileResolver.resolve(uploadDirProperty, message.userId(), assetId);
     if (asset.isEmpty()) {
+      asset =
+          durableMirror.restoreUpload(uploadDirProperty, message.userId(), String.valueOf(assetId));
+    }
+    if (asset.isEmpty()) {
       logger.warn(
           "Job {}: the asset named for '{}' is not user {}'s; the step fails on the missing file"
               + " rather than read someone else's",
@@ -813,6 +827,7 @@ public class JobListener {
       // A job's input payload is the user's own words and, for a document capability, the
       // document itself. Encrypted like every other asset (ADR-054).
       encryptedAssetService.write(inputJsonPath, jsonBytes);
+      durableMirror.put(userId, jobId, inputJsonPath);
       logger.info("Saved job input payload to: {}", inputJsonPath);
 
       String filePath = (String) payload.get("filePath");
@@ -824,6 +839,7 @@ public class JobListener {
           try (InputStream source = Files.newInputStream(file.toPath())) {
             encryptedAssetService.write(inputFilePath, source, file.length());
           }
+          durableMirror.put(userId, jobId, inputFilePath);
           logger.info("Copied input media file to: {}", inputFilePath);
         }
       }
@@ -889,6 +905,7 @@ public class JobListener {
       Path outputJsonPath = outputDir.resolve("result.json");
       byte[] jsonBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(result);
       encryptedAssetService.write(outputJsonPath, jsonBytes);
+      durableMirror.put(userId, jobId, outputJsonPath);
       logger.info("Saved job output result to: {}", outputJsonPath);
     } catch (Exception e) {
       logger.error("Failed to save output result to file", e);

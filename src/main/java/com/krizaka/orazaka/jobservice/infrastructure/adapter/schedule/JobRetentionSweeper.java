@@ -42,4 +42,10 @@ public class JobRetentionSweeper {
     jobRetentionService.purgeExpired(uploadRoot);
     jobRetentionService.reconcileOrphans(uploadRoot);
   }
+
+  /** Deletes uploads older than the ordinary retention window; hourly, listing is not free. */
+  @Scheduled(fixedDelayString = "${orazaka.jobs.upload-retention-interval:3600000}")
+  public void sweepUploads() {
+    jobRetentionService.purgeExpiredUploads();
+  }
 }
