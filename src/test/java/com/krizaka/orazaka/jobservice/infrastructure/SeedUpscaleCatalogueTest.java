@@ -47,4 +47,21 @@ class SeedUpscaleCatalogueTest {
         .containsPattern(
             "UPDATE orazaka_models SET [^;]*capabilities = 'video-upscale'[^;]*commercial_use = 'yes'[^;]*WHERE model_name = 'seedvr2-3b';");
   }
+
+  @Test
+  @DisplayName("the bake-off winners are model rows: LTX-Video 0.9.8 (landscape, fast) and Wan 2.2 I2V A14B at 40 steps (people)")
+  void theBakeOffWinnersAreModelRows() {
+    assertThat(SEED)
+        .contains(
+            "('ltx-video-0.9.8-13b-distilled', 'LTX-Video 0.9.8 13B distilled (720p, GPU)', 'video', NULL, 'localai-video', FALSE, 8, 24, NULL)");
+    assertThat(SEED)
+        .contains(
+            "('wan2.2-i2v-a14b-hq', 'Wan 2.2 I2V A14B (720p, 40 steps)', 'video', NULL, 'localai-video', FALSE, 40, 16, NULL)");
+    assertThat(SEED)
+        .containsPattern(
+            "UPDATE orazaka_models SET [^;]*family = 'LTX-Video'[^;]*commercial_use = 'yes'[^;]*WHERE model_name = 'ltx-video-0.9.8-13b-distilled';");
+    assertThat(SEED)
+        .containsPattern(
+            "UPDATE orazaka_models SET [^;]*licence = 'Apache-2.0'[^;]*WHERE model_name = 'wan2.2-i2v-a14b-hq';");
+  }
 }
