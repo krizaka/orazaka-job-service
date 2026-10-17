@@ -72,7 +72,15 @@ public final class AssetFileResolver {
       logger.error("Refused an actor id that is not a single path segment");
       return Optional.empty();
     }
-    File userDir = new File(uploadDir, userId);
+    // The user directory, normalised and shown to sit under the upload root before anything reads
+    // it.
+    Path root = Path.of(uploadDir).toAbsolutePath().normalize();
+    Path userPath = root.resolve(userId).normalize();
+    if (!userPath.startsWith(root) || userPath.equals(root)) {
+      logger.error("Refused an actor directory outside the upload root");
+      return Optional.empty();
+    }
+    File userDir = userPath.toFile();
 
     // temp/ first — freshly uploaded files land there before anything persists them.
     Optional<File> found = findByPrefix(new File(userDir, "temp"), prefix, userDir);
