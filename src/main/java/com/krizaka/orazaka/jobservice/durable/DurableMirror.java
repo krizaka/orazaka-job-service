@@ -1,4 +1,4 @@
-package com.krizaka.orazaka.jobservice.infrastructure.support;
+package com.krizaka.orazaka.jobservice.durable;
 
 import com.krizaka.orazaka.assets.domain.port.AssetKeys;
 import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,19 +125,23 @@ public class DurableMirror {
   /**
    * Restores every upload of the actor a payload names (an id, or a list of them) that the disk no
    * longer has, so the resolver that follows finds them.
+   *
+   * @param onDisk whether an asset id already resolves to a file on this disk (the caller's own
+   *     resolver: this package depends on nothing of the service)
    */
-  public void restoreUploadsNamedBy(String uploadDir, String userId, Object value) {
+  public void restoreUploadsNamedBy(
+      String uploadDir, String userId, Object value, Predicate<String> onDisk) {
     if (!store.enabled() || userId == null) {
       return;
     }
     if (value instanceof String candidate && ASSET_ID.matcher(candidate).matches()) {
-      if (AssetFileResolver.resolve(uploadDir, userId, candidate).isEmpty()) {
+      if (!onDisk.test(candidate)) {
         restoreUpload(uploadDir, userId, candidate);
       }
     } else if (value instanceof List<?> items) {
-      items.forEach(item -> restoreUploadsNamedBy(uploadDir, userId, item));
+      items.forEach(item -> restoreUploadsNamedBy(uploadDir, userId, item, onDisk));
     } else if (value instanceof java.util.Map<?, ?> map) {
-      map.values().forEach(item -> restoreUploadsNamedBy(uploadDir, userId, item));
+      map.values().forEach(item -> restoreUploadsNamedBy(uploadDir, userId, item, onDisk));
     }
   }
 }

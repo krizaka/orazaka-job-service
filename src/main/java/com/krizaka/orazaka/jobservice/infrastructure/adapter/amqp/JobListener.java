@@ -18,9 +18,9 @@ import com.krizaka.orazaka.jobs.domain.model.JobExecutionContext;
 import com.krizaka.orazaka.jobs.domain.model.JobExecutionResult;
 import com.krizaka.orazaka.jobs.domain.port.JobExecutor;
 import com.krizaka.orazaka.jobservice.application.service.ContextService;
+import com.krizaka.orazaka.jobservice.durable.DurableMirror;
 import com.krizaka.orazaka.jobservice.infrastructure.config.JobsProperties;
 import com.krizaka.orazaka.jobservice.infrastructure.support.AssetFileResolver;
-import com.krizaka.orazaka.jobservice.infrastructure.support.DurableMirror;
 import com.krizaka.orazaka.jobservice.infrastructure.support.PathResolver;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.CapabilityManager;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
@@ -734,7 +734,11 @@ public class JobListener {
     // Every asset id in the payload, wherever it sits: `assetId` for the single-image capabilities,
     // and list-valued inputs like a composition's `photos` (ADR-046).
     // A redeploy wipes the disk, not the durable store: bring this actor's own uploads back first.
-    durableMirror.restoreUploadsNamedBy(uploadDirProperty, message.userId(), payload);
+    durableMirror.restoreUploadsNamedBy(
+        uploadDirProperty,
+        message.userId(),
+        payload,
+        id -> AssetFileResolver.resolve(uploadDirProperty, message.userId(), id).isPresent());
     Map<String, Object> resolved =
         AssetFileResolver.resolvePayload(uploadDirProperty, message.userId(), payload);
 

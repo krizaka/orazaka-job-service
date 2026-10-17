@@ -126,7 +126,7 @@ class JobListenerTest {
             assets,
             unmeteredTurns,
             runningJobs,
-            com.krizaka.orazaka.jobservice.infrastructure.support.DurableMirror.localOnly());
+            com.krizaka.orazaka.jobservice.durable.DurableMirror.localOnly());
   }
 
   @Test
@@ -412,7 +412,7 @@ class JobListenerTest {
               assets,
               unmeteredTurns,
               runningJobs,
-              com.krizaka.orazaka.jobservice.infrastructure.support.DurableMirror.localOnly());
+              com.krizaka.orazaka.jobservice.durable.DurableMirror.localOnly());
 
       when(userDirectoryService.getUser(userId))
           .thenAnswer(
@@ -464,7 +464,7 @@ class JobListenerTest {
               assets,
               unmeteredTurns,
               runningJobs,
-              com.krizaka.orazaka.jobservice.infrastructure.support.DurableMirror.localOnly());
+              com.krizaka.orazaka.jobservice.durable.DurableMirror.localOnly());
 
       lenient()
           .when(userDirectoryService.getUser(userId))

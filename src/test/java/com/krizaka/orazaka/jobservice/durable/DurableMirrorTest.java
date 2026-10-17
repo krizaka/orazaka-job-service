@@ -1,4 +1,4 @@
-package com.krizaka.orazaka.jobservice.infrastructure.support;
+package com.krizaka.orazaka.jobservice.durable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -8,6 +8,7 @@ import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
 import com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties;
 import com.krizaka.orazaka.assets.infrastructure.storage.DirectoryAssetStore;
 import com.krizaka.orazaka.jobservice.infrastructure.adapter.amqp.JobListenerTestAssets;
+import com.krizaka.orazaka.jobservice.infrastructure.support.AssetFileResolver;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -83,7 +84,12 @@ class DurableMirrorTest {
     String freshDisk = work.resolve("fresh").toString();
     Map<String, Object> payload = Map.of("photos", List.of(ASSET), "prompt", "x");
 
-    mirror().restoreUploadsNamedBy(freshDisk, "u1", payload);
+    mirror()
+        .restoreUploadsNamedBy(
+            freshDisk,
+            "u1",
+            payload,
+            id -> AssetFileResolver.resolve(freshDisk, "u1", id).isPresent());
 
     Map<String, Object> resolved = AssetFileResolver.resolvePayload(freshDisk, "u1", payload);
     assertThat((List<?>) resolved.get("photos")).singleElement().asString().endsWith(".jpg");

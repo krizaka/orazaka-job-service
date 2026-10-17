@@ -29,7 +29,7 @@ class WorkerInputServiceTest {
         assets,
         new ObjectMapper(),
         uploads.toString(),
-        com.krizaka.orazaka.jobservice.infrastructure.support.DurableMirror.localOnly());
+        com.krizaka.orazaka.jobservice.durable.DurableMirror.localOnly());
   }
 
   private Path archive(String user, String imageKeyValue) throws IOException {

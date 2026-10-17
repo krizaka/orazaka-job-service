@@ -316,7 +316,7 @@ class ProtectedJobRetentionIT {
         assets,
         turn -> {},
         new com.krizaka.orazaka.jobservice.infrastructure.adapter.amqp.RunningJobs(),
-        com.krizaka.orazaka.jobservice.infrastructure.support.DurableMirror.localOnly());
+        com.krizaka.orazaka.jobservice.durable.DurableMirror.localOnly());
   }
 
   private EncryptedAssetService assets() {
