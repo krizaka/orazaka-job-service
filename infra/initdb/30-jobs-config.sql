@@ -517,7 +517,8 @@ INSERT INTO orazaka_capabilities
   $${"type": "object", "properties": {"prompt": {"type": "string", "format": "prose"}, "text": {"type": "string", "format": "prose"}, "model": {"type": "string"}}, "anyOf": [{"required": ["prompt"]}, {"required": ["text"]}]}$$::jsonb,
   $${"type": "object", "properties": {"content": {"type": "string"}, "metadata": {"type": "object"}}, "required": ["content"]}$$::jsonb, true),
 -- Studio media composition (ADR-034 §7.2): photos + clip + voiceover + captions + brand
--- overlay → 9:16 MP4. It is a CAPABILITY, not Studio code — the existing Python
+-- overlay → 9:16 MP4. Or, given `clips` (earlier steps' video outputs) and an `edit` decision list, the cut of a
+-- cinematic short (krizaka/orazaka ADR-080, orazaka-worker-media app/cut.py): trims, ramps, transitions, grade, titles. It is a CAPABILITY, not Studio code — the existing Python
 -- orazaka-worker-media executes it (app/composer.py, bound to job.compose.*).
 -- ENABLED since phase 4, when that worker branch landed.
 -- billable_unit OUTPUT_SECOND (ADR-041). The worker has always reported frames and fps
@@ -531,7 +532,7 @@ INSERT INTO orazaka_capabilities
 -- reel — and pricing it as chat understated it by the whole difference between the CHAT and VIDEO
 -- pricebook rows. See ADR-038's consequences and the hygiene commit for the measured effect.
 ('orazaka.studio.media.compose', 'media.compose', 'job.compose.assemble', 'OUTPUT_SECOND', 'VIDEO', 'BATCH',
-  $${"type": "object", "properties": {"photos": {"type": "array", "items": {"type": "string", "format": "asset-id"}, "minItems": 1}, "audio": {"type": "string", "format": "asset-id"}}, "required": ["photos"]}$$::jsonb,
+  $${"type": "object", "properties": {"photos": {"type": "array", "items": {"type": "string", "format": "asset-id"}, "minItems": 1}, "audio": {"type": "string", "format": "asset-id"}, "clips": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 24}, "edit": {"type": "string"}}, "anyOf": [{"required": ["photos"]}, {"required": ["clips", "edit"]}]}$$::jsonb,
   $${"type": "object", "properties": {"url": {"type": "string"}, "assetId": {"type": "string"}, "format": {"type": "string"}, "metrics": {"type": "object"}}, "required": ["url"]}$$::jsonb, true)
 ON CONFLICT (feature_key) DO NOTHING;
 
