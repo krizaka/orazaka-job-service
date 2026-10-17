@@ -9,6 +9,7 @@ import com.krizaka.orazaka.jobs.domain.model.JobCommand;
 import com.krizaka.orazaka.jobs.domain.model.JobExecutionContext;
 import com.krizaka.orazaka.jobs.domain.model.JobExecutionResult;
 import com.krizaka.orazaka.jobs.domain.port.JobExecutor;
+import com.krizaka.orazaka.jobservice.catalog.ModelResolution;
 import com.krizaka.orazaka.jobservice.infrastructure.support.MediaFileStore;
 import java.util.Base64;
 import java.util.HashMap;
@@ -64,7 +65,9 @@ public final class ImageGenerationStrategy implements JobExecutor {
       throw new JobExecutionException(malformed.getMessage(), malformed);
     }
 
-    String model = modelResolver.resolve(message.resolvedModel(), "image", "flux-2-klein-4b");
+    ModelResolution resolution =
+        modelResolver.resolution(message.resolvedModel(), "image", "flux-2-klein-4b");
+    String model = resolution.model();
     ImageRequest imageRequest =
         new ImageRequest(
             prompt,
@@ -103,6 +106,11 @@ public final class ImageGenerationStrategy implements JobExecutor {
     // How the image was made, kept with it: what a gallery caption or a re-run needs, and what
     // "generated locally in N s" is measured on.
     result.put("model", model);
+    if (resolution.notice() != null) {
+      // The default was not available and another model made the image: say so with the image.
+      logger.warn("Job {}: {}", message.jobId(), resolution.notice());
+      result.put("modelNotice", resolution.notice());
+    }
     result.put("seed", String.valueOf(requested.direction().seed()));
     result.put("generationMs", generationMs);
 

@@ -30,7 +30,7 @@ class SpeechSynthesisStrategyTest {
   private SpeechSynthesisStrategy strategy;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws Exception {
     strategy =
         new SpeechSynthesisStrategy(
             aiClient,
