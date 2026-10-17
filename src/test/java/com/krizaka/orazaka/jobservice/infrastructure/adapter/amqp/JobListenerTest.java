@@ -10,6 +10,7 @@ import com.krizaka.orazaka.jobs.domain.model.JobCommand;
 import com.krizaka.orazaka.jobs.domain.model.JobExecutionResult;
 import com.krizaka.orazaka.jobservice.application.service.ContextService;
 import com.krizaka.orazaka.jobservice.infrastructure.config.JobsProperties;
+import com.krizaka.orazaka.persistence.domain.model.JobDto;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.CapabilityManager;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
 import com.krizaka.users.domain.model.User;
@@ -58,6 +59,8 @@ class JobListenerTest {
 
   private final com.krizaka.billing.domain.port.UnmeteredTurnRepository unmeteredTurns =
       recordedTurns::add;
+
+  private final RunningJobs runningJobs = new RunningJobs();
 
   private JobListener listener;
   private ObjectMapper objectMapper = new ObjectMapper();
@@ -121,7 +124,8 @@ class JobListenerTest {
             capabilityManager,
             messageDedupService,
             assets,
-            unmeteredTurns);
+            unmeteredTurns,
+            runningJobs);
   }
 
   @Test
@@ -405,7 +409,8 @@ class JobListenerTest {
               capabilityManager,
               messageDedupService,
               assets,
-              unmeteredTurns);
+              unmeteredTurns,
+              runningJobs);
 
       when(userDirectoryService.getUser(userId))
           .thenAnswer(
@@ -455,7 +460,8 @@ class JobListenerTest {
               capabilityManager,
               messageDedupService,
               assets,
-              unmeteredTurns);
+              unmeteredTurns,
+              runningJobs);
 
       lenient()
           .when(userDirectoryService.getUser(userId))
@@ -1061,5 +1067,68 @@ class JobListenerTest {
     } catch (java.io.IOException e) {
       throw new java.io.UncheckedIOException(e);
     }
+  }
+
+  @Test
+  void aJobCancelledWhileQueued_isNeverExecuted_andReportsCancelled() throws Exception {
+    String jobId = "job-queued";
+    String userId = UUID.randomUUID().toString();
+    runningJobs.cancel(jobId);
+    JobCommand msg =
+        new JobCommand(
+            jobId,
+            userId,
+            "orazaka.core.chat.text",
+            "default",
+            Map.of("prompt", "never runs"),
+            com.krizaka.orazaka.jobs.domain.model.DataClass.STANDARD);
+    when(jobPersistenceProvider.getJob(jobId)).thenReturn(Optional.empty());
+
+    listener.onMessage(msg, null);
+
+    verify(chatStrategy, never()).execute(any(), any());
+    verify(jobEventPublisher).emitCancelled(jobId, null);
+    verify(jobEventPublisher, never()).emitError(any(), any(), any(), any());
+    verify(jobPersistenceProvider, never())
+        .updateJobStatus(eq(jobId), eq("PROCESSING"), any(), any());
+  }
+
+  @Test
+  void aJobCancelledWhileRunning_endsCancelled_notFailed() throws Exception {
+    String jobId = "job-running";
+    String userId = UUID.randomUUID().toString();
+    JobCommand msg =
+        new JobCommand(
+            jobId,
+            userId,
+            "orazaka.core.chat.text",
+            "default",
+            Map.of("prompt", "long"),
+            com.krizaka.orazaka.jobs.domain.model.DataClass.STANDARD);
+    when(userDirectoryService.getUser(userId))
+        .thenReturn(
+            new User(
+                UUID.fromString(userId),
+                "u",
+                "u@example.com",
+                true,
+                Set.of("ROLE_USER"),
+                Map.of()));
+    when(jobPersistenceProvider.getJob(jobId)).thenReturn(Optional.of(mock(JobDto.class)));
+    when(chatStrategy.execute(eq(msg), any()))
+        .thenAnswer(
+            invocation -> {
+              // The owner cancels mid-run: the platform interrupts the executing thread, and the
+              // executor surfaces whatever its blocked call throws.
+              runningJobs.cancel(jobId);
+              throw new IllegalStateException("interrupted");
+            });
+
+    listener.onMessage(msg, null);
+
+    verify(jobPersistenceProvider).updateJobStatus(jobId, "CANCELLED", null, "CANCELLED_BY_OWNER");
+    verify(jobEventPublisher).emitCancelled(jobId, null);
+    verify(jobEventPublisher, never()).emitError(any(), any(), any(), any());
+    assertFalse(Thread.currentThread().isInterrupted());
   }
 }

@@ -125,4 +125,29 @@ class JobEventPublisherTest {
 
     assertEquals("PLATFORM_UNAVAILABLE", capturePayload("job.job-9.error").get("cause"));
   }
+
+  @Test
+  void emitCancelled_isATerminalEventThatReleasesTheReservation() {
+    new JobEventPublisher(rabbitTemplate).emitCancelled("job-9", "hold-1");
+
+    Map<String, Object> payload = capturePayload("job.job-9.cancelled");
+    assertEquals("job-9", payload.get("jobId"));
+    assertEquals("hold-1", payload.get("holdId"));
+  }
+
+  @Test
+  void emitCancelled_omitsTheKeyWhenUnmetered() {
+    new JobEventPublisher(rabbitTemplate).emitCancelled("job-10", null);
+
+    assertFalse(capturePayload("job.job-10.cancelled").containsKey("holdId"));
+  }
+
+  @Test
+  void emitProgress_carriesThePhaseTheUserReads() {
+    new JobEventPublisher(rabbitTemplate).emitProgress("job-11", 0, "generating");
+
+    Map<String, Object> payload = capturePayload("job.job-11.progress");
+    assertEquals(0, payload.get("progress"));
+    assertEquals("generating", payload.get("phase"));
+  }
 }

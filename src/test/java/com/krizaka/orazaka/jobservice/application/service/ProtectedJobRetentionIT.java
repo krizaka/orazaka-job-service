@@ -314,7 +314,8 @@ class ProtectedJobRetentionIT {
         capabilities,
         dedup,
         assets,
-        turn -> {});
+        turn -> {},
+        new com.krizaka.orazaka.jobservice.infrastructure.adapter.amqp.RunningJobs());
   }
 
   private EncryptedAssetService assets() {
