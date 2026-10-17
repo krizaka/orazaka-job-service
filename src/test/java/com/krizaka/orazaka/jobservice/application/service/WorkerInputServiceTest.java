@@ -25,7 +25,11 @@ class WorkerInputServiceTest {
   private final EncryptedAssetService assets = mock(EncryptedAssetService.class);
 
   private WorkerInputService service() {
-    return new WorkerInputService(assets, new ObjectMapper(), uploads.toString());
+    return new WorkerInputService(
+        assets,
+        new ObjectMapper(),
+        uploads.toString(),
+        com.krizaka.orazaka.jobservice.infrastructure.support.DurableMirror.localOnly());
   }
 
   private Path archive(String user, String imageKeyValue) throws IOException {
