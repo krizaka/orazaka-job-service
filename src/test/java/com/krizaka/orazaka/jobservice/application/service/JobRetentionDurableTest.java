@@ -56,4 +56,32 @@ class JobRetentionDurableTest {
     assertThat(purged).isZero();
     verify(jdbc, never()).update(anyString(), eq("job-1"), eq("SENSITIVE"));
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void withARetentionWindowAnOrdinaryJobIsPurgedToo_files_durableCopy_thenRow() throws IOException {
+    DurableAssetStore durable = mock(DurableAssetStore.class);
+    when(durable.enabled()).thenReturn(true);
+    JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    when(jdbc.query(anyString(), any(RowMapper.class), eq("STANDARD"), eq(30L * 86_400)))
+        .thenReturn(List.of(Map.entry("job-9", "user-9")));
+
+    int purged = new JobRetentionService(jdbc, durable, TENANT, 30).purgeExpired(root);
+
+    assertThat(purged).isEqualTo(1);
+    verify(durable).delete("t/acme/u/user-9/jobs/job-9/");
+    verify(jdbc).update(anyString(), eq("job-9"), eq("STANDARD"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void withoutAWindowAnOrdinaryJobIsKept() {
+    JdbcTemplate jdbc = mock(JdbcTemplate.class);
+
+    int purged =
+        new JobRetentionService(jdbc, mock(DurableAssetStore.class), TENANT, 0).purgeExpired(root);
+
+    assertThat(purged).isZero();
+    verify(jdbc, never()).query(anyString(), any(RowMapper.class), eq("STANDARD"), any());
+  }
 }

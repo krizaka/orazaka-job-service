@@ -17,6 +17,8 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -60,11 +62,27 @@ public class JobRetentionService {
   private final JdbcTemplate jdbcTemplate;
   private final DurableAssetStore durableAssetStore;
   private final MediaStorageProperties storage;
+  private final int ordinaryRetentionDays;
 
+  /** Keeps ordinary jobs forever: the window is opt-in, {@code MEDIA_RETENTION_DAYS}. */
   public JobRetentionService(
       JdbcTemplate jdbcTemplate,
       DurableAssetStore durableAssetStore,
       MediaStorageProperties storage) {
+    this(jdbcTemplate, durableAssetStore, storage, 0);
+  }
+
+  /**
+   * @param ordinaryRetentionDays days an ordinary (STANDARD) job and its files are kept after it
+   *     ends; {@code 0} keeps them. Data, not code: a dev environment sets 30.
+   */
+  @Autowired
+  public JobRetentionService(
+      JdbcTemplate jdbcTemplate,
+      DurableAssetStore durableAssetStore,
+      MediaStorageProperties storage,
+      @Value("${media.retention.days:0}") int ordinaryRetentionDays) {
+    this.ordinaryRetentionDays = Math.max(0, ordinaryRetentionDays);
     this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "JdbcTemplate cannot be null");
     this.durableAssetStore =
         Objects.requireNonNull(durableAssetStore, "DurableAssetStore cannot be null");
@@ -99,6 +117,9 @@ public class JobRetentionService {
     int purged = 0;
     for (DataClass dataClass : DataClass.values()) {
       Optional<Duration> window = dataClass.jobRetentionAfterTerminal();
+      if (window.isEmpty() && ordinaryRetentionDays > 0) {
+        window = Optional.of(Duration.ofDays(ordinaryRetentionDays));
+      }
       if (window.isEmpty()) {
         continue;
       }
@@ -109,7 +130,7 @@ public class JobRetentionService {
       }
     }
     if (purged > 0) {
-      logger.info("Retention purged {} protected job(s): rows and files", purged);
+      logger.info("Retention purged {} job(s): rows and files", purged);
     }
     return purged;
   }
