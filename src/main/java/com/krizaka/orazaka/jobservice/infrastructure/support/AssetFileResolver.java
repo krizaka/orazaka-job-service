@@ -68,11 +68,26 @@ public final class AssetFileResolver {
     if (prefix.isBlank()) {
       return Optional.empty();
     }
+    if (!isSingleSegment(userId)) {
+      logger.error("Refused an actor id that is not a single path segment");
+      return Optional.empty();
+    }
     File userDir = new File(uploadDir, userId);
 
     // temp/ first — freshly uploaded files land there before anything persists them.
     Optional<File> found = findByPrefix(new File(userDir, "temp"), prefix, userDir);
     return found.isPresent() ? found : findByPrefix(userDir, prefix, userDir);
+  }
+
+  /**
+   * The actor id names one directory under the upload root: no separator, no {@code ..}, no NUL.
+   */
+  private static boolean isSingleSegment(String userId) {
+    return !userId.equals(".")
+        && !userId.equals("..")
+        && userId.indexOf('/') < 0
+        && userId.indexOf('\\') < 0
+        && userId.indexOf('\0') < 0;
   }
 
   /**

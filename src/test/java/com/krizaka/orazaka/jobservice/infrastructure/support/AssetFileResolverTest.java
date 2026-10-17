@@ -55,6 +55,21 @@ class AssetFileResolverTest {
   }
 
   @Test
+  @DisplayName("an actor id that climbs out of the upload root finds nothing")
+  void actorIdCannotClimbOutOfTheUploadRoot(@TempDir Path base) throws IOException {
+    Path uploadDir = Files.createDirectories(base.resolve("uploads"));
+    String assetId = seedAsset(base, "outside");
+
+    assertThat(AssetFileResolver.resolve(uploadDir.toString(), "../outside", assetId)).isEmpty();
+    assertThat(AssetFileResolver.resolve(uploadDir.toString(), "a/../../outside", assetId))
+        .isEmpty();
+    assertThat(
+            AssetFileResolver.resolve(
+                uploadDir.toString(), base.resolve("outside").toString(), assetId))
+        .isEmpty();
+  }
+
+  @Test
   @DisplayName("a list of asset ids becomes a list of absolute paths [the reels defect]")
   void listValuedAssetsResolve(@TempDir Path uploadDir) throws IOException {
     String first = seedAsset(uploadDir, OWNER);
