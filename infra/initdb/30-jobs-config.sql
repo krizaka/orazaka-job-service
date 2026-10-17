@@ -351,6 +351,8 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 -- that is not itself a GPU machine (dev runs on App Platform). recommended_fps is the model's own.
 ('wan2.2-ti2v-5b', 'Wan 2.2 TI2V 5B (9:16, GPU)', 'video', NULL, 'localai-video', FALSE, 40, 24, NULL),
 ('wan2.1-t2v-1.3b', 'Wan 2.1 T2V 1.3B (9:16, GPU)', 'video', NULL, 'localai-video', FALSE, 30, 16, NULL),
+-- Wan 2.2 A14B on our own 80 GB card at 720p (blueprint video-generation 1.4.0, orazaka-worker-media models.yaml): the same model as the serverless one below, made here.
+('wan2.2-t2v-a14b', 'Wan 2.2 T2V A14B (720p, 80 GB GPU)', 'video', NULL, 'localai-video', FALSE, 40, 16, NULL),
 -- Wan 2.2 A14B is made by the provider `do-inference` (DigitalOcean serverless) and run by Orazaka: the media worker routes it (orazaka-worker-media, app/remote_video.py).
 ('wan2-2-t2v-a14b', 'Wan 2.2 T2V A14B (serverless)', 'video', NULL, 'do-inference', FALSE, 0, 16, NULL),
 -- Vision Models
@@ -675,6 +677,7 @@ UPDATE orazaka_models SET status = 'internal' WHERE model_name = 'stable-video-d
 UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.2', capabilities = 'video', runs_on = 'local', runtime = 'worker-media · CUDA', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/blob/main/README.md', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2.2-ti2v-5b';
 UPDATE orazaka_models SET vendor = 'Stability AI', family = 'Stable Diffusion 3.5', capabilities = 'image', runs_on = 'provider', runtime = 'DigitalOcean serverless inference', open_weights = TRUE, licence = 'Stability AI Community Licence', licence_url = 'https://stability.ai/license', commercial_use = 'conditions', context_window = NULL, status = 'available' WHERE model_name = 'stable-diffusion-3.5-large';
 UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.1', capabilities = 'video', runs_on = 'local', runtime = 'worker-media · CUDA', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/blob/main/README.md', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2.1-t2v-1.3b';
+UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.2', capabilities = 'video', runs_on = 'local', runtime = 'worker-media · CUDA', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers/blob/main/README.md', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2.2-t2v-a14b';
 UPDATE orazaka_models SET vendor = 'Alibaba (Wan-AI)', family = 'Wan 2.2', capabilities = 'video', runs_on = 'provider', runtime = 'DigitalOcean serverless inference', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B', commercial_use = 'yes', context_window = NULL, status = 'available' WHERE model_name = 'wan2-2-t2v-a14b';
 
 
