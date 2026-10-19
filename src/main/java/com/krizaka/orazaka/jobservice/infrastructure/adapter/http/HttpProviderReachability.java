@@ -14,9 +14,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Probes a provider's base URL: an HTTP answer below 500 means the engine is up; a refused or timed-out
- * connection, or a 5xx (a relay that is up while the engine behind it is stopped answers 502/503/504),
- * means it is not.
+ * Probes a provider's base URL: an HTTP answer below 500 means the engine is up; a refused or
+ * timed-out connection, or a 5xx (a relay that is up while the engine behind it is stopped answers
+ * 502/503/504), means it is not.
  *
  * <p>Cached, because the answer is read for every option of every form and on every run: an answer
  * lives {@value #UP_TTL_SECONDS} s, a failure {@value #DOWN_TTL_SECONDS} s so a server that just
