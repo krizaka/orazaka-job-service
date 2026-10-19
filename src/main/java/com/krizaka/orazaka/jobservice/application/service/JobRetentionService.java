@@ -2,6 +2,7 @@ package com.krizaka.orazaka.jobservice.application.service;
 
 import com.krizaka.orazaka.assets.domain.port.AssetKeys;
 import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
+import com.krizaka.orazaka.assets.domain.port.StoredObject;
 import com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties;
 import com.krizaka.orazaka.jobs.domain.model.DataClass;
 import java.io.IOException;
@@ -9,6 +10,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +19,8 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -60,11 +64,27 @@ public class JobRetentionService {
   private final JdbcTemplate jdbcTemplate;
   private final DurableAssetStore durableAssetStore;
   private final MediaStorageProperties storage;
+  private final int ordinaryRetentionDays;
 
+  /** Keeps ordinary jobs forever: the window is opt-in, {@code MEDIA_RETENTION_DAYS}. */
   public JobRetentionService(
       JdbcTemplate jdbcTemplate,
       DurableAssetStore durableAssetStore,
       MediaStorageProperties storage) {
+    this(jdbcTemplate, durableAssetStore, storage, 0);
+  }
+
+  /**
+   * @param ordinaryRetentionDays days an ordinary (STANDARD) job and its files are kept after it
+   *     ends; {@code 0} keeps them. Data, not code: a dev environment sets 30.
+   */
+  @Autowired
+  public JobRetentionService(
+      JdbcTemplate jdbcTemplate,
+      DurableAssetStore durableAssetStore,
+      MediaStorageProperties storage,
+      @Value("${media.retention.days:0}") int ordinaryRetentionDays) {
+    this.ordinaryRetentionDays = Math.max(0, ordinaryRetentionDays);
     this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "JdbcTemplate cannot be null");
     this.durableAssetStore =
         Objects.requireNonNull(durableAssetStore, "DurableAssetStore cannot be null");
@@ -99,6 +119,9 @@ public class JobRetentionService {
     int purged = 0;
     for (DataClass dataClass : DataClass.values()) {
       Optional<Duration> window = dataClass.jobRetentionAfterTerminal();
+      if (window.isEmpty() && ordinaryRetentionDays > 0) {
+        window = Optional.of(Duration.ofDays(ordinaryRetentionDays));
+      }
       if (window.isEmpty()) {
         continue;
       }
@@ -109,7 +132,45 @@ public class JobRetentionService {
       }
     }
     if (purged > 0) {
-      logger.info("Retention purged {} protected job(s): rows and files", purged);
+      logger.info("Retention purged {} job(s): rows and files", purged);
+    }
+    return purged;
+  }
+
+  /**
+   * Deletes the durable copy of every upload older than the ordinary retention window. Uploads
+   * belong to no job, so the job purge never reaches them. A no-op without a window or a store.
+   *
+   * @return how many uploads were deleted
+   */
+  public int purgeExpiredUploads() {
+    if (ordinaryRetentionDays <= 0 || !durableAssetStore.enabled()) {
+      return 0;
+    }
+    java.sql.Timestamp now = jdbcTemplate.queryForObject("SELECT now()", java.sql.Timestamp.class);
+    if (now == null) {
+      return 0;
+    }
+    Instant cutoff = now.toInstant().minus(Duration.ofDays(ordinaryRetentionDays));
+    int purged = 0;
+    try {
+      for (StoredObject user :
+          durableAssetStore.list(AssetKeys.tenantUsersPrefix(storage.tenant()))) {
+        if (!user.directory()) {
+          continue;
+        }
+        for (StoredObject upload : durableAssetStore.list(user.key() + "jobs/uploads/")) {
+          if (!upload.directory() && upload.lastModified().isBefore(cutoff)) {
+            durableAssetStore.delete(upload.key());
+            purged++;
+          }
+        }
+      }
+    } catch (IOException e) {
+      logger.warn("Upload retention stopped, the next sweep resumes: {}", e.getMessage());
+    }
+    if (purged > 0) {
+      logger.info("Retention deleted {} expired upload(s)", purged);
     }
     return purged;
   }

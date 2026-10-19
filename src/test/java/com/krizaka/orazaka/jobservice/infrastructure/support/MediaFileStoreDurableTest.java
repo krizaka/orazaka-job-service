@@ -63,6 +63,23 @@ class MediaFileStoreDurableTest {
   }
 
   @Test
+  void afterARedeployTheOutputIsStillReadable_aFreshDiskFetchesTheSealedEnvelopeBack()
+      throws IOException {
+    DurableAssetStore durable = new DirectoryAssetStore(work.resolve("durable"));
+    new MediaFileStore(assets, durable, TENANT)
+        .save(work.resolve("uploads-before").toString(), "u1", "j1", pngBytes(), "image.png");
+
+    // A redeploy: the container is new, its disk is empty, the durable store is the same.
+    MediaFileStore afterRedeploy = new MediaFileStore(assets, durable, TENANT);
+    String freshDisk = work.resolve("uploads-after").toString();
+
+    assertThat(afterRedeploy.read(freshDisk, "u1", "j1", "image.png")).contains(pngBytes());
+    assertThat(afterRedeploy.read(freshDisk, "u2", "j1", "image.png"))
+        .as("another user's key is another prefix")
+        .isEmpty();
+  }
+
+  @Test
   void localOnlyWritesNoSecondCopy() throws IOException {
     MediaFileStore store = new MediaFileStore(assets, new NoDurableAssetStore(), TENANT);
     assertThat(store.save(work.resolve("uploads").toString(), "u1", "j1", pngBytes(), "image.png"))

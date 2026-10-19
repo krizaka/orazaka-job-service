@@ -1,6 +1,7 @@
 package com.krizaka.orazaka.jobservice.application.service;
 
 import com.krizaka.orazaka.assets.application.service.EncryptedAssetService;
+import com.krizaka.orazaka.jobservice.durable.DurableMirror;
 import com.krizaka.orazaka.jobservice.infrastructure.support.AssetFileResolver;
 import com.krizaka.orazaka.jobservice.infrastructure.support.PathResolver;
 import java.io.IOException;
@@ -43,11 +44,14 @@ public class WorkerInputService {
   private final EncryptedAssetService encryptedAssetService;
   private final ObjectMapper objectMapper;
   private final String uploadDir;
+  private final DurableMirror durableMirror;
 
   public WorkerInputService(
       EncryptedAssetService encryptedAssetService,
       ObjectMapper objectMapper,
-      @Value("${spring.servlet.multipart.location:var/orazaka-uploads}") String uploadDir) {
+      @Value("${spring.servlet.multipart.location:var/orazaka-uploads}") String uploadDir,
+      DurableMirror durableMirror) {
+    this.durableMirror = Objects.requireNonNull(durableMirror, "DurableMirror cannot be null");
     this.encryptedAssetService =
         Objects.requireNonNull(encryptedAssetService, "EncryptedAssetService cannot be null");
     this.objectMapper = Objects.requireNonNull(objectMapper, "ObjectMapper cannot be null");
@@ -73,12 +77,16 @@ public class WorkerInputService {
       Path root = PathResolver.resolve(uploadDir).toAbsolutePath().normalize();
       Path ownerRoot = root.resolve(userId).normalize();
       Path input = ownerRoot.resolve(jobId).resolve("input").resolve("input.json").normalize();
-      if (!input.startsWith(ownerRoot) || !Files.isRegularFile(input)) {
+      if (!input.startsWith(ownerRoot)) {
+        return Optional.empty();
+      }
+      // A redeploy wipes the disk, not the durable store.
+      if (!Files.isRegularFile(input) && !durableMirror.restore(userId, jobId, input)) {
         return Optional.empty();
       }
       Map<?, ?> payload =
           objectMapper.readValue(encryptedAssetService.readAllBytes(input, true), Map.class);
-      Optional<Path> image = namedImage(payload, ownerRoot);
+      Optional<Path> image = namedImage(payload, ownerRoot, userId, jobId);
       if (image.isEmpty() || Files.size(image.get()) > MAX_BYTES) {
         return Optional.empty();
       }
@@ -115,6 +123,10 @@ public class WorkerInputService {
     try {
       Optional<java.io.File> file =
           AssetFileResolver.resolve(PathResolver.resolveToString(uploadDir), userId, assetId);
+      if (file.isEmpty()) {
+        file =
+            durableMirror.restoreUpload(PathResolver.resolveToString(uploadDir), userId, assetId);
+      }
       if (file.isEmpty() || file.get().length() > MAX_BYTES) {
         return Optional.empty();
       }
@@ -128,11 +140,15 @@ public class WorkerInputService {
   }
 
   /** The file the archived input names (resolved by the listener), if it is the actor's own. */
-  private static Optional<Path> namedImage(Map<?, ?> payload, Path ownerRoot) {
+  private Optional<Path> namedImage(
+      Map<?, ?> payload, Path ownerRoot, String userId, String jobId) {
     for (String key : new String[] {"imagePath", "image"}) {
       if (payload.get(key) instanceof String value && !value.isBlank() && value.startsWith("/")) {
         Path candidate = Path.of(value).toAbsolutePath().normalize();
-        if (candidate.startsWith(ownerRoot) && Files.isRegularFile(candidate)) {
+        if (candidate.startsWith(ownerRoot)
+            && (Files.isRegularFile(candidate)
+                || durableMirror.restore(userId, jobId, candidate)
+                || durableMirror.restoreUploadFile(userId, candidate))) {
           return Optional.of(candidate);
         }
       }

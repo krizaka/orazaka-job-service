@@ -60,13 +60,30 @@ public class MediaFileStore {
       Path root = PathResolver.resolve(uploadDir).toAbsolutePath().normalize();
       Path filePath =
           root.resolve(userId).resolve(jobId).resolve("output").resolve(filename).normalize();
-      if (!filePath.startsWith(root) || !Files.isRegularFile(filePath)) {
+      if (!filePath.startsWith(root)) {
+        return java.util.Optional.empty();
+      }
+      // A redeploy wipes the disk, not the durable store: bring the sealed envelope back first.
+      if (!Files.isRegularFile(filePath) && !restore(userId, jobId, filename, filePath)) {
         return java.util.Optional.empty();
       }
       return java.util.Optional.of(encryptedAssetService.readAllBytes(filePath, false));
     } catch (IOException e) {
       logger.error("Failed to read a stored output", e);
       return java.util.Optional.empty();
+    }
+  }
+
+  private boolean restore(String userId, String jobId, String filename, Path filePath)
+      throws IOException {
+    if (!durableAssetStore.enabled()) {
+      return false;
+    }
+    try {
+      return durableAssetStore.fetch(
+          AssetKeys.jobFile(storage.tenant(), userId, jobId, filename), filePath);
+    } catch (IllegalArgumentException e) {
+      return false;
     }
   }
 
