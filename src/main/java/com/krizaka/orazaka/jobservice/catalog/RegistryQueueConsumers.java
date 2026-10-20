@@ -12,13 +12,13 @@ import org.springframework.stereotype.Component;
 
 /**
  * {@link QueueConsumers} read from the worker registry ({@code worker_registry}, kept by {@code
- * WorkerRegistryService}) and from the categories whose jobs an external worker runs ({@code
- * model_category_queue}, data).
+ * WorkerRegistryService}) and from the kinds of job an external worker runs ({@code model_category_queue}, data: one row
+ * per category and per hosted / self-hosted).
  *
- * <p>Only a category listed there is ever greyed out by this: the job service runs the others
- * itself, and the registry is advisory (ADR-038) — a worker that failed to register must not switch
- * off what it can serve. A table that is not readable (a database not migrated yet) means nothing
- * is known, so nothing is greyed out.
+ * <p>Only a kind listed there is ever greyed out by this: the job service runs the others itself, and the registry is
+ * advisory (ADR-038) — a worker that failed to register must not switch off what it can serve. A hosted model of a
+ * category that has no hosted row waits where the self-hosted ones do. A table that is not readable (a database not
+ * migrated yet) means nothing is known, so nothing is greyed out.
  */
 @Component
 class RegistryQueueConsumers implements QueueConsumers {
@@ -34,32 +34,38 @@ class RegistryQueueConsumers implements QueueConsumers {
   }
 
   @Override
-  public boolean drained(String category) {
+  public boolean drained(String category, boolean hosted) {
     try {
-      return workerQueueOf(category).map(this::drains).orElse(true);
+      return queueOf(category, hosted).map(this::drains).orElse(true);
     } catch (DataAccessException unknown) {
       logger.debug("The worker registry is not readable: {}", unknown.toString());
       return true;
     }
   }
 
-  /**
-   * The routing key an external worker drains for the jobs of a category; empty when the job
-   * service runs it.
-   */
-  Optional<String> workerQueueOf(String category) {
+  @Override
+  public Optional<String> queueOf(String category, boolean hosted) {
+    try {
+      Optional<String> own = rowOf(category, hosted);
+      return own.isPresent() || !hosted ? own : rowOf(category, false);
+    } catch (DataAccessException unknown) {
+      logger.debug("model_category_queue is not readable: {}", unknown.toString());
+      return Optional.empty();
+    }
+  }
+
+  private Optional<String> rowOf(String category, boolean hosted) {
     return jdbcTemplate
         .queryForList(
-            "SELECT routing_key FROM model_category_queue WHERE category = ?",
+            "SELECT routing_key FROM model_category_queue WHERE category = ? AND hosted = ?",
             String.class,
-            category)
+            category,
+            hosted)
         .stream()
         .findFirst();
   }
 
-  /**
-   * Whether some {@code HEALTHY} worker is bound to the key the way the broker would deliver it.
-   */
+  /** Whether some {@code HEALTHY} worker is bound to the key the way the broker would deliver it. */
   boolean drains(String routingKey) {
     for (String bindings :
         jdbcTemplate.queryForList(

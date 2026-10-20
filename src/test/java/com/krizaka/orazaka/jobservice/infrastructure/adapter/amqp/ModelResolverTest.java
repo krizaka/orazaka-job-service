@@ -26,7 +26,7 @@ class ModelResolverTest {
   void setUp() {
     resolver =
         new ModelResolver(
-            new ModelOptionsService(catalogModelManager, provider -> true, category -> true));
+            new ModelOptionsService(catalogModelManager, provider -> true, (category, hosted) -> true));
   }
 
   @Test

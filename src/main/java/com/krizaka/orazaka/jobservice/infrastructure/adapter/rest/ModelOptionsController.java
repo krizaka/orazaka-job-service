@@ -4,6 +4,7 @@ import com.krizaka.orazaka.jobservice.catalog.ModelOption;
 import com.krizaka.orazaka.jobservice.catalog.ModelOptionsService;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,5 +37,20 @@ class ModelOptionsController {
   @GetMapping("/options")
   List<ModelOption> options(@RequestParam String category) {
     return modelOptions.options(category);
+  }
+
+  /**
+   * The queue a job on a model is published with when it is not the capability's own (a hosted video model is run by
+   * the CPU worker's queue, a self-hosted one by the GPU worker's).
+   *
+   * @param model the model id
+   * @return {@code {"routingKey": "..."}}, or 204 when the capability's own key is right
+   */
+  @GetMapping("/queue")
+  ResponseEntity<java.util.Map<String, String>> queue(@RequestParam String model) {
+    return modelOptions
+        .queueOf(model)
+        .map(key -> ResponseEntity.ok(java.util.Map.of("routingKey", key)))
+        .orElseGet(() -> ResponseEntity.noContent().build());
   }
 }
