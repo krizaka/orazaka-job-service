@@ -1,10 +1,7 @@
 package com.krizaka.orazaka.jobservice.infrastructure.adapter.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.krizaka.orazaka.persistence.domain.ports.inbound.CatalogModelManager;
 import com.sun.net.httpserver.HttpServer;
