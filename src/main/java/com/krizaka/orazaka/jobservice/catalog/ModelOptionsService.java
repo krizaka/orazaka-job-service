@@ -16,23 +16,34 @@ import org.springframework.stereotype.Service;
  * blank field resolves to, and the check on a model id that arrives typed all read the same rows
  * through the same rules, so what a person is offered is what will run.
  *
+ * <p><b>A model is runnable when its engine answers and a worker drains its queue.</b> The engine
+ * is the provider's endpoint ({@link ProviderReachability}); the queue is the one a video job waits
+ * in, drained by a worker that is alive in the registry ({@link QueueConsumers}). A self-hosted GPU
+ * model with no GPU worker, or a hosted one with nobody to route it, is listed but greyed out with
+ * a reason code, never offered as the default and refused by name when it is still submitted.
+ *
  * <p><b>The default is a preference, not a promise.</b> The row flagged {@code is_default} is used
- * when its engine answers; when it does not (a local diffusion server that is off, a GPU host that
- * is stopped), the first other available model takes over and the resolution carries a notice, so
- * the run succeeds on a model that exists and says which. When nothing answers the run is refused
- * by name instead of failing deep inside an engine with an opaque error (krizaka/orazaka#203).
+ * when it is runnable; when it is not (a local diffusion server that is off, a GPU host that is
+ * stopped, no worker up), the first other runnable model takes over and the resolution carries a
+ * notice, so the run succeeds on a model that exists and says which. When nothing answers the run
+ * is refused by name instead of failing deep inside an engine with an opaque error
+ * (krizaka/orazaka#203).
  */
 @Service
 public class ModelOptionsService {
 
   private final CatalogModelManager catalogModelManager;
   private final ProviderReachability reachability;
+  private final QueueConsumers consumers;
 
   public ModelOptionsService(
-      CatalogModelManager catalogModelManager, ProviderReachability reachability) {
+      CatalogModelManager catalogModelManager,
+      ProviderReachability reachability,
+      QueueConsumers consumers) {
     this.catalogModelManager =
         Objects.requireNonNull(catalogModelManager, "CatalogModelManager cannot be null");
     this.reachability = Objects.requireNonNull(reachability, "ProviderReachability cannot be null");
+    this.consumers = Objects.requireNonNull(consumers, "QueueConsumers cannot be null");
   }
 
   /**
@@ -46,8 +57,9 @@ public class ModelOptionsService {
     List<CatalogModelDto> offered = offered(category);
     Optional<CatalogModelDto> chosen = chooseDefault(offered);
     List<ModelOption> options = new ArrayList<>();
+    boolean drained = consumers.drained(category);
     for (CatalogModelDto model : offered) {
-      boolean up = reachability.reachable(model.providerName());
+      boolean up = drained && reachability.reachable(model.providerName());
       options.add(
           new ModelOption(
               model.modelName(),
@@ -59,7 +71,8 @@ public class ModelOptionsService {
               model.priceCents(),
               model.description(),
               up,
-              up ? null : unavailableReason(model),
+              up ? null : unavailableReason(model, drained),
+              up ? null : unavailableCode(model, drained),
               chosen.filter(c -> c.modelName().equals(model.modelName())).isPresent()));
     }
     options.sort(Comparator.comparing((ModelOption o) -> !o.available()));
@@ -87,14 +100,15 @@ public class ModelOptionsService {
           .map(model -> ModelResolution.of(model.modelName()))
           .orElseGet(() -> ModelResolution.of(fallback));
     }
+    boolean drained = consumers.drained(category);
     CatalogModelDto preferred = declaredDefault(offered).orElse(null);
-    if (preferred != null && reachability.reachable(preferred.providerName())) {
+    if (preferred != null && runnable(preferred, drained)) {
       return ModelResolution.of(preferred.modelName());
     }
     Optional<CatalogModelDto> instead =
         offered.stream()
             .filter(model -> preferred == null || !model.modelName().equals(preferred.modelName()))
-            .filter(model -> reachability.reachable(model.providerName()))
+            .filter(model -> runnable(model, drained))
             .findFirst();
     if (instead.isPresent()) {
       String notice =
@@ -110,7 +124,7 @@ public class ModelOptionsService {
         "No "
             + category
             + " model is available right now"
-            + (preferred == null ? "" : " (" + unavailableReason(preferred) + ")")
+            + (preferred == null ? "" : " (" + unavailableReason(preferred, drained) + ")")
             + ". Try again in a few minutes.");
   }
 
@@ -147,16 +161,37 @@ public class ModelOptionsService {
 
   /** The default when its engine answers, else the first model that does, else the declared one. */
   private Optional<CatalogModelDto> chooseDefault(List<CatalogModelDto> offered) {
+    boolean drained = offered.isEmpty() || consumers.drained(offered.getFirst().category());
     Optional<CatalogModelDto> declared = declaredDefault(offered);
-    if (declared.isPresent() && reachability.reachable(declared.get().providerName())) {
+    if (declared.isPresent() && runnable(declared.get(), drained)) {
       return declared;
     }
     Optional<CatalogModelDto> instead =
-        offered.stream().filter(model -> reachability.reachable(model.providerName())).findFirst();
+        offered.stream().filter(model -> runnable(model, drained)).findFirst();
     return instead.isPresent() ? instead : declared;
   }
 
-  private static String unavailableReason(CatalogModelDto model) {
+  private boolean runnable(CatalogModelDto model, boolean drained) {
+    return drained && reachability.reachable(model.providerName());
+  }
+
+  /**
+   * Why a model cannot run now, as a code a client words in its language (see {@link ModelOption}).
+   */
+  private static String unavailableCode(CatalogModelDto model, boolean drained) {
+    if (!model.isHosted()) {
+      return "gpu_offline";
+    }
+    return drained ? "provider_down" : "worker_offline";
+  }
+
+  private static String unavailableReason(CatalogModelDto model, boolean drained) {
+    if (!drained) {
+      return model.modelLabel()
+          + (model.isHosted()
+              ? " is not available right now (no worker is running its jobs)"
+              : " needs a GPU, and none is online right now");
+    }
     return model.modelLabel()
         + (model.isHosted()
             ? " is not answering (its provider could not be reached)"

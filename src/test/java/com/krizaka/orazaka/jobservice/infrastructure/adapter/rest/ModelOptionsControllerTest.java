@@ -30,6 +30,7 @@ class ModelOptionsControllerTest {
             "Hosted.",
             true,
             null,
+            null,
             true);
     when(service.options("image")).thenReturn(List.of(option));
 
