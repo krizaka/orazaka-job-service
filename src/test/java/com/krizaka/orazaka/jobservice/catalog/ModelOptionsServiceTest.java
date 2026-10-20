@@ -73,7 +73,7 @@ class ModelOptionsServiceTest {
 
   private ModelOptionsService service(Set<String> up) {
     when(catalog.getModelsByCategory("image")).thenReturn(List.of(FLUX, SD35, PLANNED));
-    return new ModelOptionsService(catalog, up::contains, (category, hosted) -> true);
+    return new ModelOptionsService(catalog, up::contains, (c, h) -> true);
   }
 
   @Test
@@ -136,8 +136,7 @@ class ModelOptionsServiceTest {
   @DisplayName("A category the catalogue knows nothing about keeps the caller's fallback")
   void emptyCategoryUsesTheFallback() {
     when(catalog.getModelsByCategory("audio")).thenReturn(List.of());
-    ModelOptionsService svc =
-        new ModelOptionsService(catalog, name -> true, (category, hosted) -> true);
+    ModelOptionsService svc = new ModelOptionsService(catalog, name -> true, (c, h) -> true);
 
     assertThat(svc.resolve(null, "audio", "whisper-base").model()).isEqualTo("whisper-base");
     assertThat(svc.resolve("my-model", "audio", "whisper-base").model()).isEqualTo("my-model");
@@ -229,8 +228,7 @@ class ModelOptionsServiceTest {
       "No worker drains the video queue: every video model is greyed out, each with its own reason code")
   void noWorkerMeansNoRunnableVideoModel() {
     List<ModelOption> options =
-        video(Set.of("localai-video", "do-inference"), (category, hosted) -> false)
-            .options("video");
+        video(Set.of("localai-video", "do-inference"), (c, h) -> false).options("video");
 
     assertThat(options).allMatch(option -> !option.available());
     assertThat(options)
@@ -245,8 +243,7 @@ class ModelOptionsServiceTest {
   @DisplayName(
       "A worker is up but the GPU's engine is not: the GPU model is greyed out, the hosted one runs and is the default")
   void gpuEngineOffHostedRunsAndIsTheDefault() {
-    List<ModelOption> options =
-        video(Set.of("do-inference"), (category, hosted) -> true).options("video");
+    List<ModelOption> options = video(Set.of("do-inference"), (c, h) -> true).options("video");
 
     ModelOption hosted = options.getFirst();
     assertThat(hosted.value()).isEqualTo("wan2-2-t2v-a14b");
@@ -263,7 +260,7 @@ class ModelOptionsServiceTest {
       "A hosted model whose provider does not answer says so, not that a worker is missing")
   void hostedProviderDown() {
     ModelOption hosted =
-        video(Set.of("localai-video"), (category, hosted) -> true).options("video").stream()
+        video(Set.of("localai-video"), (c, h) -> true).options("video").stream()
             .filter(option -> "wan2-2-t2v-a14b".equals(option.value()))
             .findFirst()
             .orElseThrow();
@@ -275,8 +272,7 @@ class ModelOptionsServiceTest {
   @DisplayName(
       "Submitting a GPU model while no worker runs the queue is refused by name, not left to wait for a machine")
   void unrunnableNamedModelIsRefused() {
-    ModelOptionsService none =
-        video(Set.of("localai-video", "do-inference"), (category, hosted) -> false);
+    ModelOptionsService none = video(Set.of("localai-video", "do-inference"), (c, h) -> false);
 
     assertThatThrownBy(() -> none.resolve(null, "video", "x"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -288,7 +284,7 @@ class ModelOptionsServiceTest {
       "With the GPU worker up, both video models are runnable and the declared default keeps its place")
   void everythingUp() {
     List<ModelOption> options =
-        video(Set.of("localai-video", "do-inference"), (category, hosted) -> true).options("video");
+        video(Set.of("localai-video", "do-inference"), (c, h) -> true).options("video");
 
     assertThat(options).allMatch(ModelOption::available);
     assertThat(options.stream().filter(ModelOption::isDefault).map(ModelOption::value))
@@ -301,8 +297,7 @@ class ModelOptionsServiceTest {
   void hostedAndGpuQueuesAreIndependent() {
     // a hosted-video worker is alive (the cheap CPU consumer), no GPU worker
     List<ModelOption> options =
-        video(Set.of("localai-video", "do-inference"), (category, hosted) -> hosted)
-            .options("video");
+        video(Set.of("localai-video", "do-inference"), (c, h) -> h).options("video");
 
     ModelOption hosted = options.getFirst();
     assertThat(hosted.value()).isEqualTo("wan2-2-t2v-a14b");
