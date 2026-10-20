@@ -150,7 +150,7 @@ class ModelOptionsServiceTest {
     assertThat(options)
         .extracting(ModelOption::value)
         .containsExactly("stable-diffusion-3.5-large", "flux-2-klein-4b");
-    ModelOption hosted = options.get(0);
+    ModelOption hosted = options.getFirst();
     assertThat(hosted.runsOn()).isEqualTo("cloud");
     assertThat(hosted.speed()).isEqualTo("fast");
     assertThat(hosted.typicalSeconds()).isEqualTo(8);
