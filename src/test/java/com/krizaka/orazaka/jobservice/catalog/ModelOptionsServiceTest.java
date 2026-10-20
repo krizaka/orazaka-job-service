@@ -73,7 +73,7 @@ class ModelOptionsServiceTest {
 
   private ModelOptionsService service(Set<String> up) {
     when(catalog.getModelsByCategory("image")).thenReturn(List.of(FLUX, SD35, PLANNED));
-    return new ModelOptionsService(catalog, up::contains);
+    return new ModelOptionsService(catalog, up::contains, category -> true);
   }
 
   @Test
@@ -136,7 +136,7 @@ class ModelOptionsServiceTest {
   @DisplayName("A category the catalogue knows nothing about keeps the caller's fallback")
   void emptyCategoryUsesTheFallback() {
     when(catalog.getModelsByCategory("audio")).thenReturn(List.of());
-    ModelOptionsService svc = new ModelOptionsService(catalog, name -> true);
+    ModelOptionsService svc = new ModelOptionsService(catalog, name -> true, category -> true);
 
     assertThat(svc.resolve(null, "audio", "whisper-base").model()).isEqualTo("whisper-base");
     assertThat(svc.resolve("my-model", "audio", "whisper-base").model()).isEqualTo("my-model");
@@ -174,5 +174,119 @@ class ModelOptionsServiceTest {
     assertThat(ModelOption.speedOf(21)).isEqualTo("balanced");
     assertThat(ModelOption.speedOf(90)).isEqualTo("balanced");
     assertThat(ModelOption.speedOf(157)).isEqualTo("slow");
+  }
+
+  // ── A model is runnable when its engine answers AND someone drains the queue its jobs wait in
+  // ──────────
+  // (dev, 2026-10-20: self-hosted GPU models were offered while no GPU worker was up, so a run
+  // waited for « a machine »
+  // for ever; the hosted Wan is made by the provider but still routed by the media worker.)
+
+  private static final CatalogModelDto GPU_VIDEO =
+      new CatalogModelDto(
+          10,
+          "wan2.2-t2v-a14b",
+          "Wan 2.2 T2V A14B (720p, GPU)",
+          "video",
+          null,
+          false,
+          "localai-video",
+          40,
+          16,
+          null,
+          "GPU.",
+          "local",
+          "available",
+          null,
+          null);
+  private static final CatalogModelDto HOSTED_VIDEO =
+      new CatalogModelDto(
+          11,
+          "wan2-2-t2v-a14b",
+          "Wan 2.2 T2V A14B (serverless)",
+          "video",
+          null,
+          true,
+          "do-inference",
+          0,
+          16,
+          null,
+          "Hosted.",
+          "provider",
+          "available",
+          null,
+          60);
+
+  private ModelOptionsService video(Set<String> up, java.util.function.Predicate<String> drained) {
+    when(catalog.getModelsByCategory("video")).thenReturn(List.of(GPU_VIDEO, HOSTED_VIDEO));
+    return new ModelOptionsService(catalog, up::contains, drained::test);
+  }
+
+  @Test
+  @DisplayName(
+      "No worker drains the video queue: every video model is greyed out, each with its own reason code")
+  void noWorkerMeansNoRunnableVideoModel() {
+    List<ModelOption> options =
+        video(Set.of("localai-video", "do-inference"), category -> false).options("video");
+
+    assertThat(options).allMatch(option -> !option.available());
+    assertThat(options)
+        .extracting(ModelOption::value, ModelOption::unavailableCode)
+        .containsExactlyInAnyOrder(
+            org.assertj.core.groups.Tuple.tuple("wan2.2-t2v-a14b", "gpu_offline"),
+            org.assertj.core.groups.Tuple.tuple("wan2-2-t2v-a14b", "worker_offline"));
+    assertThat(options).allMatch(option -> option.unavailableReason() != null);
+  }
+
+  @Test
+  @DisplayName(
+      "A worker is up but the GPU's engine is not: the GPU model is greyed out, the hosted one runs and is the default")
+  void gpuEngineOffHostedRunsAndIsTheDefault() {
+    List<ModelOption> options = video(Set.of("do-inference"), category -> true).options("video");
+
+    ModelOption hosted = options.getFirst();
+    assertThat(hosted.value()).isEqualTo("wan2-2-t2v-a14b");
+    assertThat(hosted.available()).isTrue();
+    assertThat(hosted.unavailableCode()).isNull();
+    assertThat(hosted.isDefault()).isTrue();
+    ModelOption gpu = options.get(1);
+    assertThat(gpu.available()).isFalse();
+    assertThat(gpu.unavailableCode()).isEqualTo("gpu_offline");
+  }
+
+  @Test
+  @DisplayName(
+      "A hosted model whose provider does not answer says so, not that a worker is missing")
+  void hostedProviderDown() {
+    ModelOption hosted =
+        video(Set.of("localai-video"), category -> true).options("video").stream()
+            .filter(option -> "wan2-2-t2v-a14b".equals(option.value()))
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(hosted.unavailableCode()).isEqualTo("provider_down");
+  }
+
+  @Test
+  @DisplayName(
+      "Submitting a GPU model while no worker runs the queue is refused by name, not left to wait for a machine")
+  void unrunnableNamedModelIsRefused() {
+    ModelOptionsService none = video(Set.of("localai-video", "do-inference"), category -> false);
+
+    assertThatThrownBy(() -> none.resolve(null, "video", "x"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("No video model is available");
+  }
+
+  @Test
+  @DisplayName(
+      "With the GPU worker up, both video models are runnable and the declared default keeps its place")
+  void everythingUp() {
+    List<ModelOption> options =
+        video(Set.of("localai-video", "do-inference"), category -> true).options("video");
+
+    assertThat(options).allMatch(ModelOption::available);
+    assertThat(options.stream().filter(ModelOption::isDefault).map(ModelOption::value))
+        .containsExactly("wan2-2-t2v-a14b");
   }
 }

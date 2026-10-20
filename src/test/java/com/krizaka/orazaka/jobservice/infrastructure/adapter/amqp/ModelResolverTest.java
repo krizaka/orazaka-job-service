@@ -24,7 +24,9 @@ class ModelResolverTest {
 
   @BeforeEach
   void setUp() {
-    resolver = new ModelResolver(new ModelOptionsService(catalogModelManager, provider -> true));
+    resolver =
+        new ModelResolver(
+            new ModelOptionsService(catalogModelManager, provider -> true, category -> true));
   }
 
   @Test

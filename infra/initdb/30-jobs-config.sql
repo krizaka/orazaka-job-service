@@ -104,6 +104,20 @@ CREATE TABLE worker_registry (
 -- Partial index: the only question asked of this table is "which families are served right now".
 CREATE INDEX idx_worker_family ON worker_registry(worker_family) WHERE status = 'HEALTHY';
 
+-- The model categories whose jobs an EXTERNAL worker runs (the media worker, on a GPU or the Mac): the queue their jobs wait in.
+-- A model of such a category is runnable only while a HEALTHY worker above drains that queue — otherwise a run waits for
+-- « a machine » for ever (dev, 2026-10-20). Categories the job service runs itself are not listed: nothing is checked for
+-- them, the registry being advisory (ADR-038). Data, so a new worker-run category is a row, not a release.
+CREATE TABLE IF NOT EXISTS model_category_queue (
+    category    VARCHAR(50)  PRIMARY KEY,
+    routing_key VARCHAR(120) NOT NULL CHECK (routing_key LIKE 'job.%')
+);
+INSERT INTO model_category_queue (category, routing_key) VALUES
+    ('video', 'job.video.generate'),
+    ('music', 'job.sound.generate'),
+    ('foley', 'job.sound.generate')
+ON CONFLICT (category) DO NOTHING;
+
 -- ── Config plane ─────────────────────────────────────────────────────────────
 
 -- Operation-graph capability registry: blueprint (label/icon/routing) + enabled state.

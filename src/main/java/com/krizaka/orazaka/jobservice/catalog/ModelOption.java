@@ -14,6 +14,10 @@ package com.krizaka.orazaka.jobservice.catalog;
  * @param hint the catalogue's one-sentence description
  * @param available whether the engine answers right now
  * @param unavailableReason why not, in a sentence a person can act on; null when available
+ * @param unavailableCode why not, as a code a client words in the page's language ({@code
+ *     gpu_offline}: a self-hosted model and no live GPU worker or engine; {@code worker_offline}: a
+ *     hosted model but no worker routing its jobs; {@code provider_down}: the hosted provider does
+ *     not answer); null when available
  * @param isDefault whether this is the option used when the person chooses nothing
  */
 public record ModelOption(
@@ -27,6 +31,7 @@ public record ModelOption(
     String hint,
     boolean available,
     String unavailableReason,
+    String unavailableCode,
     boolean isDefault) {
 
   /** At or under this many seconds a model reads as fast. */
