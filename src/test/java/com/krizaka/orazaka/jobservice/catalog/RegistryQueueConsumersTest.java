@@ -22,7 +22,7 @@ class RegistryQueueConsumersTest {
   private final RegistryQueueConsumers consumers = new RegistryQueueConsumers(jdbc);
 
   private void videoQueue() {
-    when(jdbc.queryForList(anyString(), eq(String.class), eq("video")))
+    when(jdbc.queryForList(anyString(), eq(String.class), eq("video"), eq(false)))
         .thenReturn(List.of("job.video.generate"));
   }
 
@@ -36,9 +36,10 @@ class RegistryQueueConsumersTest {
   @DisplayName(
       "A category the job service runs itself is always drained: the registry is not asked")
   void inProcessCategoryIsDrained() {
-    when(jdbc.queryForList(anyString(), eq(String.class), eq("image"))).thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), eq(String.class), eq("image"), eq(false)))
+        .thenReturn(List.of());
 
-    assertThat(consumers.drained("image")).isTrue();
+    assertThat(consumers.drained("image", false)).isTrue();
   }
 
   @Test
@@ -47,7 +48,7 @@ class RegistryQueueConsumersTest {
     videoQueue();
     healthyBindings("[\"job.video.*\", \"job.compose.*\"]");
 
-    assertThat(consumers.drained("video")).isTrue();
+    assertThat(consumers.drained("video", false)).isTrue();
   }
 
   @Test
@@ -56,7 +57,7 @@ class RegistryQueueConsumersTest {
     videoQueue();
     healthyBindings();
 
-    assertThat(consumers.drained("video")).isFalse();
+    assertThat(consumers.drained("video", false)).isFalse();
   }
 
   @Test
@@ -66,16 +67,34 @@ class RegistryQueueConsumersTest {
     videoQueue();
     healthyBindings("not json", "[\"job.compose.*\"]");
 
-    assertThat(consumers.drained("video")).isFalse();
+    assertThat(consumers.drained("video", false)).isFalse();
   }
 
   @Test
   @DisplayName(
       "A database not migrated yet (no table) means nothing is known: nothing is greyed out")
   void unreadableRegistryGreysNothingOut() {
-    when(jdbc.queryForList(anyString(), eq(String.class), eq("video")))
+    when(jdbc.queryForList(anyString(), eq(String.class), eq("video"), eq(false)))
         .thenThrow(new BadSqlGrammarException("q", "s", new SQLException("no table")));
 
-    assertThat(consumers.drained("video")).isTrue();
+    assertThat(consumers.drained("video", false)).isTrue();
+  }
+
+  @Test
+  @DisplayName(
+      "A hosted model has its own queue (data); a category with no hosted row falls back to the self-hosted one")
+  void hostedQueueIsItsOwnWithAFallback() {
+    when(jdbc.queryForList(anyString(), eq(String.class), eq("video"), eq(true)))
+        .thenReturn(List.of("job.hostedvideo.generate"));
+    when(jdbc.queryForList(anyString(), eq(String.class), eq("music"), eq(true)))
+        .thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), eq(String.class), eq("music"), eq(false)))
+        .thenReturn(List.of("job.sound.generate"));
+    healthyBindings("[\"job.hostedvideo.*\"]");
+
+    assertThat(consumers.queueOf("video", true)).contains("job.hostedvideo.generate");
+    assertThat(consumers.drained("video", true)).as("the hosted worker is alive").isTrue();
+    assertThat(consumers.queueOf("music", true)).contains("job.sound.generate");
+    assertThat(consumers.drained("music", true)).as("a GPU-side queue nobody drains").isFalse();
   }
 }

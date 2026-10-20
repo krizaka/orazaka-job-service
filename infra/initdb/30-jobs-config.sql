@@ -109,14 +109,20 @@ CREATE INDEX idx_worker_family ON worker_registry(worker_family) WHERE status = 
 -- « a machine » for ever (dev, 2026-10-20). Categories the job service runs itself are not listed: nothing is checked for
 -- them, the registry being advisory (ADR-038). Data, so a new worker-run category is a row, not a release.
 CREATE TABLE IF NOT EXISTS model_category_queue (
-    category    VARCHAR(50)  PRIMARY KEY,
-    routing_key VARCHAR(120) NOT NULL CHECK (routing_key LIKE 'job.%')
+    category    VARCHAR(50)  NOT NULL,
+    -- true: a model a provider hosts (its jobs are routed by a cheap CPU worker that only calls the provider's API);
+    -- false: a model on our own hardware (a GPU worker). Two queues, so a GPU worker that is off never greys out the
+    -- hosted model and a GPU job is never taken by a worker that cannot run it.
+    hosted      BOOLEAN      NOT NULL DEFAULT FALSE,
+    routing_key VARCHAR(120) NOT NULL CHECK (routing_key LIKE 'job.%'),
+    PRIMARY KEY (category, hosted)
 );
-INSERT INTO model_category_queue (category, routing_key) VALUES
-    ('video', 'job.video.generate'),
-    ('music', 'job.sound.generate'),
-    ('foley', 'job.sound.generate')
-ON CONFLICT (category) DO NOTHING;
+INSERT INTO model_category_queue (category, hosted, routing_key) VALUES
+    ('video', FALSE, 'job.video.generate'),
+    ('video', TRUE,  'job.hostedvideo.generate'),
+    ('music', FALSE, 'job.sound.generate'),
+    ('foley', FALSE, 'job.sound.generate')
+ON CONFLICT (category, hosted) DO NOTHING;
 
 -- ── Config plane ─────────────────────────────────────────────────────────────
 

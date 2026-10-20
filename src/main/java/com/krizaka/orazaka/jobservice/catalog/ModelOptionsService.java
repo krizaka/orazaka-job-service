@@ -57,8 +57,8 @@ public class ModelOptionsService {
     List<CatalogModelDto> offered = offered(category);
     Optional<CatalogModelDto> chosen = chooseDefault(offered);
     List<ModelOption> options = new ArrayList<>();
-    boolean drained = consumers.drained(category);
     for (CatalogModelDto model : offered) {
+      boolean drained = drained(model);
       boolean up = drained && reachability.reachable(model.providerName());
       options.add(
           new ModelOption(
@@ -100,15 +100,14 @@ public class ModelOptionsService {
           .map(model -> ModelResolution.of(model.modelName()))
           .orElseGet(() -> ModelResolution.of(fallback));
     }
-    boolean drained = consumers.drained(category);
     CatalogModelDto preferred = declaredDefault(offered).orElse(null);
-    if (preferred != null && runnable(preferred, drained)) {
+    if (preferred != null && runnable(preferred)) {
       return ModelResolution.of(preferred.modelName());
     }
     Optional<CatalogModelDto> instead =
         offered.stream()
             .filter(model -> preferred == null || !model.modelName().equals(preferred.modelName()))
-            .filter(model -> runnable(model, drained))
+            .filter(this::runnable)
             .findFirst();
     if (instead.isPresent()) {
       String notice =
@@ -124,7 +123,9 @@ public class ModelOptionsService {
         "No "
             + category
             + " model is available right now"
-            + (preferred == null ? "" : " (" + unavailableReason(preferred, drained) + ")")
+            + (preferred == null
+                ? ""
+                : " (" + unavailableReason(preferred, drained(preferred)) + ")")
             + ". Try again in a few minutes.");
   }
 
@@ -161,18 +162,38 @@ public class ModelOptionsService {
 
   /** The default when its engine answers, else the first model that does, else the declared one. */
   private Optional<CatalogModelDto> chooseDefault(List<CatalogModelDto> offered) {
-    boolean drained = offered.isEmpty() || consumers.drained(offered.getFirst().category());
     Optional<CatalogModelDto> declared = declaredDefault(offered);
-    if (declared.isPresent() && runnable(declared.get(), drained)) {
+    if (declared.isPresent() && runnable(declared.get())) {
       return declared;
     }
-    Optional<CatalogModelDto> instead =
-        offered.stream().filter(model -> runnable(model, drained)).findFirst();
+    Optional<CatalogModelDto> instead = offered.stream().filter(this::runnable).findFirst();
     return instead.isPresent() ? instead : declared;
   }
 
-  private boolean runnable(CatalogModelDto model, boolean drained) {
-    return drained && reachability.reachable(model.providerName());
+  private boolean drained(CatalogModelDto model) {
+    return consumers.drained(model.category(), model.isHosted());
+  }
+
+  private boolean runnable(CatalogModelDto model) {
+    return drained(model) && reachability.reachable(model.providerName());
+  }
+
+  /**
+   * The routing key a job on this model is published with, when it is not the capability's own: a
+   * model a provider hosts is routed by a cheap CPU worker through its own queue, a self-hosted one
+   * by a GPU worker.
+   *
+   * @param modelName the model the step names (any spelling of the case)
+   * @return the key; empty for a model the job service runs itself, an unknown one, or no name
+   */
+  public Optional<String> queueOf(String modelName) {
+    if (modelName == null || modelName.isBlank()) {
+      return Optional.empty();
+    }
+    return catalogModelManager.getAllModels().stream()
+        .filter(model -> model.modelName().equalsIgnoreCase(modelName.strip()))
+        .findFirst()
+        .flatMap(model -> consumers.queueOf(model.category(), model.isHosted()));
   }
 
   /**
