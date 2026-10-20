@@ -136,7 +136,8 @@ class ModelOptionsServiceTest {
   @DisplayName("A category the catalogue knows nothing about keeps the caller's fallback")
   void emptyCategoryUsesTheFallback() {
     when(catalog.getModelsByCategory("audio")).thenReturn(List.of());
-    ModelOptionsService svc = new ModelOptionsService(catalog, name -> true, (category, hosted) -> true);
+    ModelOptionsService svc =
+        new ModelOptionsService(catalog, name -> true, (category, hosted) -> true);
 
     assertThat(svc.resolve(null, "audio", "whisper-base").model()).isEqualTo("whisper-base");
     assertThat(svc.resolve("my-model", "audio", "whisper-base").model()).isEqualTo("my-model");
@@ -217,7 +218,8 @@ class ModelOptionsServiceTest {
           null,
           60);
 
-  private ModelOptionsService video(Set<String> up, java.util.function.BiPredicate<String, Boolean> drained) {
+  private ModelOptionsService video(
+      Set<String> up, java.util.function.BiPredicate<String, Boolean> drained) {
     when(catalog.getModelsByCategory("video")).thenReturn(List.of(GPU_VIDEO, HOSTED_VIDEO));
     return new ModelOptionsService(catalog, up::contains, drained::test);
   }
@@ -227,7 +229,8 @@ class ModelOptionsServiceTest {
       "No worker drains the video queue: every video model is greyed out, each with its own reason code")
   void noWorkerMeansNoRunnableVideoModel() {
     List<ModelOption> options =
-        video(Set.of("localai-video", "do-inference"), (category, hosted) -> false).options("video");
+        video(Set.of("localai-video", "do-inference"), (category, hosted) -> false)
+            .options("video");
 
     assertThat(options).allMatch(option -> !option.available());
     assertThat(options)
@@ -242,7 +245,8 @@ class ModelOptionsServiceTest {
   @DisplayName(
       "A worker is up but the GPU's engine is not: the GPU model is greyed out, the hosted one runs and is the default")
   void gpuEngineOffHostedRunsAndIsTheDefault() {
-    List<ModelOption> options = video(Set.of("do-inference"), (category, hosted) -> true).options("video");
+    List<ModelOption> options =
+        video(Set.of("do-inference"), (category, hosted) -> true).options("video");
 
     ModelOption hosted = options.getFirst();
     assertThat(hosted.value()).isEqualTo("wan2-2-t2v-a14b");
@@ -271,7 +275,8 @@ class ModelOptionsServiceTest {
   @DisplayName(
       "Submitting a GPU model while no worker runs the queue is refused by name, not left to wait for a machine")
   void unrunnableNamedModelIsRefused() {
-    ModelOptionsService none = video(Set.of("localai-video", "do-inference"), (category, hosted) -> false);
+    ModelOptionsService none =
+        video(Set.of("localai-video", "do-inference"), (category, hosted) -> false);
 
     assertThatThrownBy(() -> none.resolve(null, "video", "x"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -291,11 +296,13 @@ class ModelOptionsServiceTest {
   }
 
   @Test
-  @DisplayName("Hosted and self-hosted models wait in different queues: a GPU worker offline greys the GPU models, not the hosted Wan")
+  @DisplayName(
+      "Hosted and self-hosted models wait in different queues: a GPU worker offline greys the GPU models, not the hosted Wan")
   void hostedAndGpuQueuesAreIndependent() {
     // a hosted-video worker is alive (the cheap CPU consumer), no GPU worker
     List<ModelOption> options =
-        video(Set.of("localai-video", "do-inference"), (category, hosted) -> hosted).options("video");
+        video(Set.of("localai-video", "do-inference"), (category, hosted) -> hosted)
+            .options("video");
 
     ModelOption hosted = options.getFirst();
     assertThat(hosted.value()).isEqualTo("wan2-2-t2v-a14b");
@@ -307,7 +314,8 @@ class ModelOptionsServiceTest {
   }
 
   @Test
-  @DisplayName("A hosted model is published on the hosted queue: the routing key comes from the data, null for a model the job service runs itself")
+  @DisplayName(
+      "A hosted model is published on the hosted queue: the routing key comes from the data, null for a model the job service runs itself")
   void queueOfAModel() {
     when(catalog.getAllModels()).thenReturn(List.of(GPU_VIDEO, HOSTED_VIDEO, FLUX));
     QueueConsumers consumers =
@@ -322,7 +330,8 @@ class ModelOptionsServiceTest {
             if (!"video".equals(category)) {
               return java.util.Optional.empty();
             }
-            return java.util.Optional.of(hosted ? "job.hostedvideo.generate" : "job.video.generate");
+            return java.util.Optional.of(
+                hosted ? "job.hostedvideo.generate" : "job.video.generate");
           }
         };
     ModelOptionsService service = new ModelOptionsService(catalog, name -> true, consumers);

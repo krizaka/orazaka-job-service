@@ -40,8 +40,8 @@ class ModelOptionsController {
   }
 
   /**
-   * The queue a job on a model is published with when it is not the capability's own (a hosted video model is run by
-   * the CPU worker's queue, a self-hosted one by the GPU worker's).
+   * The queue a job on a model is published with when it is not the capability's own (a hosted
+   * video model is run by the CPU worker's queue, a self-hosted one by the GPU worker's).
    *
    * @param model the model id
    * @return {@code {"routingKey": "..."}}, or 204 when the capability's own key is right

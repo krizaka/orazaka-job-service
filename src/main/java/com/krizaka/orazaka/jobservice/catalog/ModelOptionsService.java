@@ -123,7 +123,9 @@ public class ModelOptionsService {
         "No "
             + category
             + " model is available right now"
-            + (preferred == null ? "" : " (" + unavailableReason(preferred, drained(preferred)) + ")")
+            + (preferred == null
+                ? ""
+                : " (" + unavailableReason(preferred, drained(preferred)) + ")")
             + ". Try again in a few minutes.");
   }
 
@@ -164,8 +166,7 @@ public class ModelOptionsService {
     if (declared.isPresent() && runnable(declared.get())) {
       return declared;
     }
-    Optional<CatalogModelDto> instead =
-        offered.stream().filter(this::runnable).findFirst();
+    Optional<CatalogModelDto> instead = offered.stream().filter(this::runnable).findFirst();
     return instead.isPresent() ? instead : declared;
   }
 
@@ -178,8 +179,9 @@ public class ModelOptionsService {
   }
 
   /**
-   * The routing key a job on this model is published with, when it is not the capability's own: a model a provider
-   * hosts is routed by a cheap CPU worker through its own queue, a self-hosted one by a GPU worker.
+   * The routing key a job on this model is published with, when it is not the capability's own: a
+   * model a provider hosts is routed by a cheap CPU worker through its own queue, a self-hosted one
+   * by a GPU worker.
    *
    * @param modelName the model the step names (any spelling of the case)
    * @return the key; empty for a model the job service runs itself, an unknown one, or no name

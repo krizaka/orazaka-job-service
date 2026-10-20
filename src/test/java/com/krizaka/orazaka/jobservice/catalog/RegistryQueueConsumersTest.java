@@ -36,7 +36,8 @@ class RegistryQueueConsumersTest {
   @DisplayName(
       "A category the job service runs itself is always drained: the registry is not asked")
   void inProcessCategoryIsDrained() {
-    when(jdbc.queryForList(anyString(), eq(String.class), eq("image"), eq(false))).thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), eq(String.class), eq("image"), eq(false)))
+        .thenReturn(List.of());
 
     assertThat(consumers.drained("image", false)).isTrue();
   }
@@ -80,11 +81,13 @@ class RegistryQueueConsumersTest {
   }
 
   @Test
-  @DisplayName("A hosted model has its own queue (data); a category with no hosted row falls back to the self-hosted one")
+  @DisplayName(
+      "A hosted model has its own queue (data); a category with no hosted row falls back to the self-hosted one")
   void hostedQueueIsItsOwnWithAFallback() {
     when(jdbc.queryForList(anyString(), eq(String.class), eq("video"), eq(true)))
         .thenReturn(List.of("job.hostedvideo.generate"));
-    when(jdbc.queryForList(anyString(), eq(String.class), eq("music"), eq(true))).thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), eq(String.class), eq("music"), eq(true)))
+        .thenReturn(List.of());
     when(jdbc.queryForList(anyString(), eq(String.class), eq("music"), eq(false)))
         .thenReturn(List.of("job.sound.generate"));
     healthyBindings("[\"job.hostedvideo.*\"]");
