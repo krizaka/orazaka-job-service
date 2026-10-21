@@ -88,6 +88,44 @@ public final class AssetFileResolver {
   }
 
   /**
+   * Resolves an <b>explicit</b> {@code assetId} to the acting user's upload, or else to the media file
+   * a job of theirs wrote ({@code {uploadDir}/{userId}/{jobId}/<file>}) — what a Studio's output hands the
+   * next Studio (image-generation, then image-analysis).
+   *
+   * <p>Only for the named {@code assetId} input. {@link #resolve} and {@link #resolvePayload} stay blind
+   * to job directories on purpose: they are keyed on the value's shape, and a {@code correlationId} is
+   * a job id that must stay an id. The id must be a bare UUID and the job directory must sit under the
+   * actor's own directory, so another actor's output is simply not found.
+   *
+   * @param uploadDir the root upload directory
+   * @param userId the acting user — the run's actor, never a value from the payload
+   * @param assetId an upload id or a job id
+   * @return the file, or empty when this user has no such asset or output
+   */
+  public static Optional<File> resolveOutput(String uploadDir, String userId, Object assetId) {
+    Optional<File> upload = resolve(uploadDir, userId, assetId);
+    if (upload.isPresent() || uploadDir == null || userId == null || assetId == null) {
+      return upload;
+    }
+    String id = assetId.toString();
+    if (!ASSET_ID.matcher(id).matches() || !isSingleSegment(userId)) {
+      return Optional.empty();
+    }
+    Path root = Path.of(uploadDir).toAbsolutePath().normalize();
+    Path userPath = root.resolve(userId).normalize();
+    if (!userPath.startsWith(root) || userPath.equals(root)) {
+      return Optional.empty();
+    }
+    File jobDir = userPath.resolve(id).toFile();
+    File[] files = jobDir.isDirectory() ? jobDir.listFiles(File::isFile) : null;
+    if (files == null || files.length == 0) {
+      return Optional.empty();
+    }
+    java.util.Arrays.sort(files);
+    return withinOwnerRoot(files[0], userPath.toFile()) ? Optional.of(files[0]) : Optional.empty();
+  }
+
+  /**
    * The actor id names one directory under the upload root: no separator, no {@code ..}, no NUL.
    */
   private static boolean isSingleSegment(String userId) {

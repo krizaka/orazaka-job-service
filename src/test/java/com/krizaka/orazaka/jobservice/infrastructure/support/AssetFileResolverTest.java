@@ -139,4 +139,44 @@ class AssetFileResolverTest {
 
     assertThat(AssetFileResolver.resolve(uploadDir.toString(), OWNER, jobId)).isEmpty();
   }
+
+  private static String seedJobOutput(Path uploadDir, String owner, String fileName) throws IOException {
+    String jobId = UUID.randomUUID().toString();
+    Path dir = Files.createDirectories(uploadDir.resolve(owner).resolve(jobId));
+    Files.writeString(dir.resolve(fileName), "not really a png");
+    return jobId;
+  }
+
+  @Test
+  @DisplayName("an explicit assetId may name the output of the actor's own job (image-generation -> image-analysis)")
+  void aJobOutputResolvesWhenAssetIdIsExplicit(@TempDir Path uploadDir) throws IOException {
+    String jobId = seedJobOutput(uploadDir, OWNER, "image.png");
+
+    Optional<File> resolved = AssetFileResolver.resolveOutput(uploadDir.toString(), OWNER, jobId);
+
+    assertThat(resolved).isPresent();
+    assertThat(resolved.get().getName()).isEqualTo("image.png");
+    // The shape-keyed rewrite of a whole payload stays blind to job ids: a correlationId must stay an id.
+    assertThat(AssetFileResolver.resolve(uploadDir.toString(), OWNER, jobId)).isEmpty();
+    assertThat(AssetFileResolver.resolvePayload(uploadDir.toString(), OWNER, Map.of("correlationId", jobId)))
+        .isEqualTo(Map.of("correlationId", jobId));
+  }
+
+  @Test
+  @DisplayName("another actor's job output is not found, and neither is an id that is not a UUID")
+  void aStrangersJobOutputIsNotFound(@TempDir Path uploadDir) throws IOException {
+    String jobId = seedJobOutput(uploadDir, OWNER, "image.png");
+
+    assertThat(AssetFileResolver.resolveOutput(uploadDir.toString(), INTRUDER, jobId)).isEmpty();
+    assertThat(AssetFileResolver.resolveOutput(uploadDir.toString(), OWNER, "../" + jobId)).isEmpty();
+    assertThat(AssetFileResolver.resolveOutput(uploadDir.toString(), OWNER, "temp")).isEmpty();
+  }
+
+  @Test
+  @DisplayName("an uploaded asset still resolves first through resolveOutput")
+  void uploadsStillWin(@TempDir Path uploadDir) throws IOException {
+    String assetId = seedAsset(uploadDir, OWNER);
+
+    assertThat(AssetFileResolver.resolveOutput(uploadDir.toString(), OWNER, assetId)).isPresent();
+  }
 }

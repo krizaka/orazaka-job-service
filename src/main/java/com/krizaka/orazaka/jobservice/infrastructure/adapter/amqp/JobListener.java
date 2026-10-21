@@ -790,7 +790,7 @@ public class JobListener {
     if (assetId == null) {
       return payload;
     }
-    Optional<File> asset = AssetFileResolver.resolve(uploadDirProperty, message.userId(), assetId);
+    Optional<File> asset = AssetFileResolver.resolveOutput(uploadDirProperty, message.userId(), assetId);
     if (asset.isEmpty()) {
       asset =
           durableMirror.restoreUpload(uploadDirProperty, message.userId(), String.valueOf(assetId));
