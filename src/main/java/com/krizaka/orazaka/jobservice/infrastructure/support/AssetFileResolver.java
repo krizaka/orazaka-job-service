@@ -88,14 +88,15 @@ public final class AssetFileResolver {
   }
 
   /**
-   * Resolves an <b>explicit</b> {@code assetId} to the acting user's upload, or else to the media file
-   * a job of theirs wrote ({@code {uploadDir}/{userId}/{jobId}/<file>}) — what a Studio's output hands the
-   * next Studio (image-generation, then image-analysis).
+   * Resolves an <b>explicit</b> {@code assetId} to the acting user's upload, or else to the media
+   * file a job of theirs wrote ({@code {uploadDir}/{userId}/{jobId}/<file>}) — what a Studio's
+   * output hands the next Studio (image-generation, then image-analysis).
    *
-   * <p>Only for the named {@code assetId} input. {@link #resolve} and {@link #resolvePayload} stay blind
-   * to job directories on purpose: they are keyed on the value's shape, and a {@code correlationId} is
-   * a job id that must stay an id. The id must be a bare UUID and the job directory must sit under the
-   * actor's own directory, so another actor's output is simply not found.
+   * <p>Only for the named {@code assetId} input. {@link #resolve} and {@link #resolvePayload} stay
+   * blind to job directories on purpose: they are keyed on the value's shape, and a {@code
+   * correlationId} is a job id that must stay an id. The id must be a bare UUID and the job
+   * directory must sit under the actor's own directory, so another actor's output is simply not
+   * found.
    *
    * @param uploadDir the root upload directory
    * @param userId the acting user — the run's actor, never a value from the payload

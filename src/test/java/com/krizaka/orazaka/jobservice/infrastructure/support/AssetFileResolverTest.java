@@ -140,7 +140,8 @@ class AssetFileResolverTest {
     assertThat(AssetFileResolver.resolve(uploadDir.toString(), OWNER, jobId)).isEmpty();
   }
 
-  private static String seedJobOutput(Path uploadDir, String owner, String fileName) throws IOException {
+  private static String seedJobOutput(Path uploadDir, String owner, String fileName)
+      throws IOException {
     String jobId = UUID.randomUUID().toString();
     Path dir = Files.createDirectories(uploadDir.resolve(owner).resolve(jobId));
     Files.writeString(dir.resolve(fileName), "not really a png");
@@ -148,7 +149,8 @@ class AssetFileResolverTest {
   }
 
   @Test
-  @DisplayName("an explicit assetId may name the output of the actor's own job (image-generation -> image-analysis)")
+  @DisplayName(
+      "an explicit assetId may name the output of the actor's own job (image-generation -> image-analysis)")
   void aJobOutputResolvesWhenAssetIdIsExplicit(@TempDir Path uploadDir) throws IOException {
     String jobId = seedJobOutput(uploadDir, OWNER, "image.png");
 
@@ -156,9 +158,12 @@ class AssetFileResolverTest {
 
     assertThat(resolved).isPresent();
     assertThat(resolved.get().getName()).isEqualTo("image.png");
-    // The shape-keyed rewrite of a whole payload stays blind to job ids: a correlationId must stay an id.
+    // The shape-keyed rewrite of a whole payload stays blind to job ids: a correlationId must stay
+    // an id.
     assertThat(AssetFileResolver.resolve(uploadDir.toString(), OWNER, jobId)).isEmpty();
-    assertThat(AssetFileResolver.resolvePayload(uploadDir.toString(), OWNER, Map.of("correlationId", jobId)))
+    assertThat(
+            AssetFileResolver.resolvePayload(
+                uploadDir.toString(), OWNER, Map.of("correlationId", jobId)))
         .isEqualTo(Map.of("correlationId", jobId));
   }
 
@@ -168,7 +173,8 @@ class AssetFileResolverTest {
     String jobId = seedJobOutput(uploadDir, OWNER, "image.png");
 
     assertThat(AssetFileResolver.resolveOutput(uploadDir.toString(), INTRUDER, jobId)).isEmpty();
-    assertThat(AssetFileResolver.resolveOutput(uploadDir.toString(), OWNER, "../" + jobId)).isEmpty();
+    assertThat(AssetFileResolver.resolveOutput(uploadDir.toString(), OWNER, "../" + jobId))
+        .isEmpty();
     assertThat(AssetFileResolver.resolveOutput(uploadDir.toString(), OWNER, "temp")).isEmpty();
   }
 
