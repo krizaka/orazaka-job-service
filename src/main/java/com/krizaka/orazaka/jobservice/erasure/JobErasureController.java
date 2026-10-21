@@ -1,4 +1,4 @@
-package com.krizaka.orazaka.jobservice.infrastructure.adapter.rest;
+package com.krizaka.orazaka.jobservice.erasure;
 
 import com.krizaka.orazaka.jobservice.application.service.JobRetentionService;
 import com.krizaka.orazaka.jobservice.infrastructure.support.PathResolver;

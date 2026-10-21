@@ -1,4 +1,4 @@
-package com.krizaka.orazaka.jobservice.infrastructure.adapter.rest;
+package com.krizaka.orazaka.jobservice.erasure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
