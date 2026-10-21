@@ -63,6 +63,56 @@ class HttpProviderReachability implements ProviderReachability {
     return up;
   }
 
+  private record Loaded(java.util.Optional<java.util.Set<String>> ids, long expiresAtMillis) {}
+
+  private final ConcurrentHashMap<String, Loaded> loaded = new ConcurrentHashMap<>();
+
+  private static final java.util.regex.Pattern MODEL_ID =
+      java.util.regex.Pattern.compile("\"id\"\\s*:\\s*\"([^\"]+)\"");
+
+  @Override
+  public boolean serves(String providerName, String modelName) {
+    if (!reachable(providerName)) {
+      return false;
+    }
+    if (modelName == null || modelName.isBlank()) {
+      return true;
+    }
+    long now = System.currentTimeMillis();
+    Loaded cached = loaded.get(providerName);
+    if (cached == null || cached.expiresAtMillis() <= now) {
+      cached = new Loaded(listModels(providerName), now + UP_TTL_SECONDS * 1000);
+      loaded.put(providerName, cached);
+    }
+    return cached.ids().map(ids -> ids.contains(modelName.strip().toLowerCase())).orElse(true);
+  }
+
+  /** The ids the engine says it has loaded; empty when it does not say (then it is trusted). */
+  private java.util.Optional<java.util.Set<String>> listModels(String providerName) {
+    String baseUrl = catalogModelManager.getProviderBaseUrl(providerName);
+    String trimmed = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+    String url = trimmed.endsWith("/v1") ? trimmed + "/models" : trimmed + "/v1/models";
+    try {
+      HttpRequest request =
+          HttpRequest.newBuilder(URI.create(url)).timeout(PROBE_TIMEOUT).GET().build();
+      HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+      if (response.statusCode() != 200) {
+        return java.util.Optional.empty();
+      }
+      java.util.Set<String> ids = new java.util.HashSet<>();
+      java.util.regex.Matcher matcher = MODEL_ID.matcher(response.body());
+      while (matcher.find()) {
+        ids.add(matcher.group(1).toLowerCase());
+      }
+      return ids.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(ids);
+    } catch (java.io.IOException | IllegalArgumentException unreadable) {
+      return java.util.Optional.empty();
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+      return java.util.Optional.empty();
+    }
+  }
+
   private boolean probe(String providerName) {
     String baseUrl = catalogModelManager.getProviderBaseUrl(providerName);
     if (baseUrl == null || baseUrl.isBlank()) {

@@ -59,7 +59,7 @@ public class ModelOptionsService {
     List<ModelOption> options = new ArrayList<>();
     for (CatalogModelDto model : offered) {
       boolean drained = drained(model);
-      boolean up = drained && reachability.reachable(model.providerName());
+      boolean up = drained && reachability.serves(model.providerName(), model.modelName());
       options.add(
           new ModelOption(
               model.modelName(),
@@ -175,7 +175,7 @@ public class ModelOptionsService {
   }
 
   private boolean runnable(CatalogModelDto model) {
-    return drained(model) && reachability.reachable(model.providerName());
+    return drained(model) && reachability.serves(model.providerName(), model.modelName());
   }
 
   /**
