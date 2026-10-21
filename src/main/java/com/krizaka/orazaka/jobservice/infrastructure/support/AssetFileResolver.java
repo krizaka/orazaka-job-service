@@ -89,8 +89,8 @@ public final class AssetFileResolver {
 
   /**
    * Resolves an <b>explicit</b> {@code assetId} to the acting user's upload, or else to the media
-   * file a job of theirs wrote ({@code {uploadDir}/{userId}/{jobId}/<file>}) — what a Studio's
-   * output hands the next Studio (image-generation, then image-analysis).
+   * file a job of theirs wrote ({@code {uploadDir}/{userId}/{jobId}/output/<file>}) — what a
+   * Studio's output hands the next Studio (image-generation, then image-analysis).
    *
    * <p>Only for the named {@code assetId} input. {@link #resolve} and {@link #resolvePayload} stay
    * blind to job directories on purpose: they are keyed on the value's shape, and a {@code
@@ -117,7 +117,8 @@ public final class AssetFileResolver {
     if (!userPath.startsWith(root) || userPath.equals(root)) {
       return Optional.empty();
     }
-    File jobDir = userPath.resolve(id).toFile();
+    // MediaFileStore writes a job's results to {uploadDir}/{userId}/{jobId}/output/<file>.
+    File jobDir = userPath.resolve(id).resolve("output").toFile();
     File[] files = jobDir.isDirectory() ? jobDir.listFiles(File::isFile) : null;
     if (files == null || files.length == 0) {
       return Optional.empty();
