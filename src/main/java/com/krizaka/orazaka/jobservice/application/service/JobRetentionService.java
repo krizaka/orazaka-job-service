@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -136,6 +137,62 @@ public class JobRetentionService {
     }
     return purged;
   }
+
+  /**
+   * Erases the named jobs of one person now, whatever their age or state (orazaka#301, GDPR art.
+   * 17, Loi 25): the row, the files on the executor's disk and the durable copy.
+   *
+   * <p>The same steps, in the same order, as {@link #purgeExpired}: tombstone, then the durable
+   * copy, then the directory, then the row — so a crash half-way leaves a row that points at what
+   * is left, and asking again finishes. <b>Ownership is a row predicate</b>: a job whose {@code
+   * user_id} is not {@code userId} is not selected, so an id that belongs to somebody else is
+   * indistinguishable from an id that names nothing. Idempotent: ids already gone count as nothing.
+   *
+   * @param uploadRoot the root job directories live under
+   * @param userId the person whose jobs these are
+   * @param jobIds the jobs to erase; those not theirs or already gone are skipped
+   * @return how many jobs were erased and how many could not be (their rows are kept, and asking
+   *     again retries them)
+   */
+  public Erasure erase(Path uploadRoot, String userId, Collection<String> jobIds) {
+    Objects.requireNonNull(uploadRoot, "uploadRoot cannot be null");
+    Objects.requireNonNull(userId, "userId cannot be null");
+    if (jobIds == null || jobIds.isEmpty() || userId.isBlank()) {
+      return new Erasure(0, 0);
+    }
+    int erased = 0;
+    int failed = 0;
+    for (String jobId : new java.util.LinkedHashSet<>(jobIds)) {
+      Optional<String> dataClass =
+          jdbcTemplate
+              .query(
+                  "SELECT data_class FROM orazaka_jobs WHERE id = ? AND user_id = ?",
+                  (rs, rowNum) -> rs.getString(1),
+                  jobId,
+                  userId)
+              .stream()
+              .findFirst();
+      if (dataClass.isEmpty()) {
+        continue;
+      }
+      if (purge(uploadRoot, DataClass.valueOf(dataClass.get()), jobId, userId)) {
+        erased++;
+      } else {
+        failed++;
+      }
+    }
+    // Counts only: what an erasure removed is never logged, and who asked is not either.
+    logger.info("Erasure removed {} job(s), {} could not be removed yet", erased, failed);
+    return new Erasure(erased, failed);
+  }
+
+  /**
+   * What an erasure did.
+   *
+   * @param erased jobs whose row and files are gone
+   * @param failed jobs whose files could not be deleted; their rows are kept so a retry finishes
+   */
+  public record Erasure(int erased, int failed) {}
 
   /**
    * Deletes the durable copy of every upload older than the ordinary retention window. Uploads

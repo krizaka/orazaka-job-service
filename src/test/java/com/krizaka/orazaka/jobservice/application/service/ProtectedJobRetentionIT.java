@@ -241,6 +241,88 @@ class ProtectedJobRetentionIT {
   }
 
   @Test
+  @DisplayName("erasing a person's jobs deletes rows, files and the durable copy - theirs only")
+  void erasingAPersonsJobs_deletesRowsFilesAndTheDurableCopy_theirsOnly() throws IOException {
+    JobListener listener = listener();
+    String mine = UUID.randomUUID().toString();
+    String alsoMine = UUID.randomUUID().toString();
+    String notNamed = UUID.randomUUID().toString();
+    listener.onMessage(command(mine, DataClass.REGULATED), null);
+    listener.onMessage(command(alsoMine, DataClass.REGULATED), null);
+    listener.onMessage(command(notNamed, DataClass.REGULATED), null);
+    String somebodyElses = UUID.randomUUID().toString();
+    jdbcTemplate.update(
+        "INSERT INTO orazaka_jobs (id, user_id, feature_key, status, data_class)"
+            + " VALUES (?, ?, ?, 'COMPLETED', 'REGULATED')",
+        somebodyElses,
+        "someone-else",
+        FEATURE);
+    // Not terminal, not expired: erasure does not wait for a window - that is the point of it.
+    assertThat(rowCount(mine)).isOne();
+    assertThat(Files.isRegularFile(jobDirectory(mine).resolve("output/result.json"))).isTrue();
+
+    com.krizaka.orazaka.assets.domain.port.DurableAssetStore durable =
+        mock(com.krizaka.orazaka.assets.domain.port.DurableAssetStore.class);
+    when(durable.enabled()).thenReturn(true);
+    com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties storage =
+        new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+            "local", null, null, "storage.bunnycdn.com", null, "default");
+    JobRetentionService erasing = new JobRetentionService(jdbcTemplate, durable, storage);
+
+    JobRetentionService.Erasure done =
+        erasing.erase(uploads, ACTOR, List.of(mine, alsoMine, somebodyElses, "not-a-job"));
+
+    assertThat(done).isEqualTo(new JobRetentionService.Erasure(2, 0));
+    assertThat(rowCount(mine)).as("the named job's row").isZero();
+    assertThat(rowCount(alsoMine)).as("the other named job's row").isZero();
+    assertThat(Files.exists(jobDirectory(mine))).as("the named job's files").isFalse();
+    assertThat(Files.exists(jobDirectory(alsoMine))).isFalse();
+    verify(durable)
+        .delete(
+            com.krizaka.orazaka.assets.domain.port.AssetKeys.jobPrefix(
+                storage.tenant(), ACTOR, mine));
+    verify(durable)
+        .delete(
+            com.krizaka.orazaka.assets.domain.port.AssetKeys.jobPrefix(
+                storage.tenant(), ACTOR, alsoMine));
+    assertThat(rowCount(notNamed)).as("a job not named is not touched").isOne();
+    assertThat(rowCount(somebodyElses)).as("somebody else's job is not touched").isOne();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT row_to_json(p)::text FROM orazaka_job_purge p WHERE job_id = ?",
+                String.class,
+                mine))
+        .as("the tombstone names the job, never what it held")
+        .doesNotContain("dormir");
+
+    // Idempotent: asking again erases nothing more and does not fail.
+    assertThat(erasing.erase(uploads, ACTOR, List.of(mine, alsoMine)))
+        .isEqualTo(new JobRetentionService.Erasure(0, 0));
+  }
+
+  @Test
+  @DisplayName("an erasure that cannot delete the durable copy keeps the row and says so")
+  void anErasureThatCannotDeleteTheDurableCopy_keepsTheRow() throws IOException {
+    String jobId = UUID.randomUUID().toString();
+    listener().onMessage(command(jobId, DataClass.REGULATED), null);
+    com.krizaka.orazaka.assets.domain.port.DurableAssetStore durable =
+        mock(com.krizaka.orazaka.assets.domain.port.DurableAssetStore.class);
+    when(durable.enabled()).thenReturn(true);
+    doThrow(new IOException("store down")).when(durable).delete(anyString());
+    JobRetentionService erasing =
+        new JobRetentionService(
+            jdbcTemplate,
+            durable,
+            new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                "local", null, null, "storage.bunnycdn.com", null, "default"));
+
+    assertThat(erasing.erase(uploads, ACTOR, List.of(jobId)))
+        .isEqualTo(new JobRetentionService.Erasure(0, 1));
+
+    assertThat(rowCount(jobId)).as("the only pointer to what is still stored").isOne();
+  }
+
+  @Test
   @DisplayName("the schema refuses a job that declares no class")
   void theSchemaRefusesAJobWithNoClass() {
     assertThatThrownBy(
