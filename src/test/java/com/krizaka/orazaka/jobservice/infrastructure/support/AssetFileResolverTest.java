@@ -143,7 +143,7 @@ class AssetFileResolverTest {
   private static String seedJobOutput(Path uploadDir, String owner, String fileName)
       throws IOException {
     String jobId = UUID.randomUUID().toString();
-    Path dir = Files.createDirectories(uploadDir.resolve(owner).resolve(jobId));
+    Path dir = Files.createDirectories(uploadDir.resolve(owner).resolve(jobId).resolve("output"));
     Files.writeString(dir.resolve(fileName), "not really a png");
     return jobId;
   }
