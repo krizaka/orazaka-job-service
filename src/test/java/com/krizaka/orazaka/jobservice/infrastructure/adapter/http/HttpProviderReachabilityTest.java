@@ -23,6 +23,15 @@ class HttpProviderReachabilityTest {
     // Even a 404 is an answer: the engine is there. A 502 is a relay whose engine is stopped.
     server.createContext("/", exchange -> exchange.sendResponseHeaders(404, -1));
     server.createContext("/relay", exchange -> exchange.sendResponseHeaders(502, -1));
+    // An OpenAI-compatible engine that is up but has only some models loaded (orazaka#307).
+    server.createContext(
+        "/loaded/v1/models",
+        exchange -> {
+          byte[] body = "{\"data\":[{\"id\":\"sd-loaded\"},{\"id\":\"Other-Model\"}]}".getBytes();
+          exchange.sendResponseHeaders(200, body.length);
+          exchange.getResponseBody().write(body);
+          exchange.close();
+        });
     server.start();
     reachability = new HttpProviderReachability(catalog);
   }
@@ -79,5 +88,33 @@ class HttpProviderReachabilityTest {
     reachability.reachable("up");
 
     verify(catalog, times(1)).getProviderBaseUrl("up");
+  }
+
+  @Test
+  @DisplayName(
+      "An engine that is up but has not loaded the model does not serve it (Automatic must not pick it)")
+  void upEngineWithoutTheModelDoesNotServeIt() {
+    when(catalog.getProviderBaseUrl("loaded"))
+        .thenReturn("http://127.0.0.1:" + server.getAddress().getPort() + "/loaded");
+
+    assertThat(reachability.reachable("loaded")).isTrue();
+    assertThat(reachability.serves("loaded", "sd-loaded")).isTrue();
+    assertThat(reachability.serves("loaded", "other-model")).isTrue();
+    assertThat(reachability.serves("loaded", "flux-2-klein-4b")).isFalse();
+  }
+
+  @Test
+  @DisplayName("An engine that lists no models is trusted: reachable means it serves")
+  void engineWithoutModelListIsTrusted() {
+    when(catalog.getProviderBaseUrl("up"))
+        .thenReturn("http://127.0.0.1:" + server.getAddress().getPort());
+
+    assertThat(reachability.serves("up", "anything")).isTrue();
+  }
+
+  @Test
+  @DisplayName("A provider that is down serves nothing")
+  void downProviderServesNothing() {
+    assertThat(reachability.serves("nobody", "x")).isFalse();
   }
 }

@@ -16,4 +16,14 @@ public interface ProviderReachability {
    *     when it is unknown, has no base URL, or did not answer in time
    */
   boolean reachable(String providerName);
+
+  /**
+   * Whether the provider can run this model today: reachable, and — when its engine lists the
+   * models it has loaded (an OpenAI-compatible {@code /v1/models}) — the model is among them. An
+   * engine that lists nothing is trusted. This is what « Automatic » reads, so it never picks a
+   * model whose engine is up without it (orazaka#307).
+   */
+  default boolean serves(String providerName, String modelName) {
+    return reachable(providerName);
+  }
 }
