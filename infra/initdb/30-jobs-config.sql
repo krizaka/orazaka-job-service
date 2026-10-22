@@ -648,7 +648,7 @@ INSERT INTO pipeline_interceptor_config (interceptor_key, display_label, executi
 ('ToolInterceptor',        'Tool Interceptor',         9, TRUE,  'Tool callback attachment (demand-driven)'),
 ('MediaInterceptor',       'Media Interceptor',        10, TRUE, 'Base64 media extraction and multimodal assembly'),
 ('UserContextInterceptor', 'User Context Interceptor', 11, TRUE, 'Injects onboarding profile (industry, ai_behavior) as system constraints at inference'),
-('SemanticCacheInterceptor','Semantic Cache Interceptor',8, FALSE, 'Answers a repeated question from a cache before any model (ai-engine#40). OFF by default, and a pack must also declare orazaka.cache.mode. Runs after the Refiner row (same order, created later), before the Router.')
+('SemanticCacheInterceptor','Semantic Cache Interceptor',8, FALSE, 'Answers a repeated question from a cache before any model (ai-engine#40). OFF by default, and a pack must also declare orazaka.pipeline.cache.mode. Runs after the Refiner row (same order, created later), before the Router.')
 ON CONFLICT (interceptor_key) DO NOTHING;
 
 -- ----------------------------------------------------------------------------
