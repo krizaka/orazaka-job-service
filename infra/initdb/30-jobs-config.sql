@@ -290,6 +290,27 @@ CREATE TABLE pipeline_interceptor_config (
 CREATE UNIQUE INDEX idx_pipeline_interceptor_config_key ON pipeline_interceptor_config (interceptor_key);
 CREATE INDEX idx_pipeline_interceptor_config_order ON pipeline_interceptor_config (execution_order);
 
+-- The semantic cache's answers (ai-engine#40). Kept identical to orazaka-ai-engine
+-- orazaka-interceptors/src/main/resources/db/semantic-cache.sql and to the workspace migration
+-- infra/migrations/2026-10-22-semantic-cache.sql.
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE IF NOT EXISTS semantic_cache_entry (
+    id               BIGSERIAL    PRIMARY KEY,
+    tenant_id        VARCHAR(255) NOT NULL,
+    scope_guard_hash CHAR(64)     NOT NULL,
+    model_tier       VARCHAR(100) NOT NULL,
+    exact_key        CHAR(64)     NOT NULL,
+    embedding        vector(1024),                 -- NULL for an entry kept for the exact tier only
+    signature        TEXT         NOT NULL,        -- the turn's numbers and negations (TurnSignature)
+    response         TEXT         NOT NULL,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    expires_at       TIMESTAMPTZ  NOT NULL,
+    CONSTRAINT uq_semantic_cache_key UNIQUE (tenant_id, scope_guard_hash, model_tier, exact_key)
+);
+CREATE INDEX IF NOT EXISTS idx_semantic_cache_expiry ON semantic_cache_entry (expires_at);
+CREATE INDEX IF NOT EXISTS idx_semantic_cache_embedding
+    ON semantic_cache_entry USING hnsw (embedding vector_cosine_ops);
+
 CREATE TABLE validation_pipeline_configs (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     step_type             VARCHAR(20) NOT NULL
@@ -626,7 +647,8 @@ INSERT INTO pipeline_interceptor_config (interceptor_key, display_label, executi
 ('RouterInterceptor',      'Router Interceptor',       9, TRUE,  'Intent to optimal provider routing (temp: 0.0)'),
 ('ToolInterceptor',        'Tool Interceptor',         9, TRUE,  'Tool callback attachment (demand-driven)'),
 ('MediaInterceptor',       'Media Interceptor',        10, TRUE, 'Base64 media extraction and multimodal assembly'),
-('UserContextInterceptor', 'User Context Interceptor', 11, TRUE, 'Injects onboarding profile (industry, ai_behavior) as system constraints at inference')
+('UserContextInterceptor', 'User Context Interceptor', 11, TRUE, 'Injects onboarding profile (industry, ai_behavior) as system constraints at inference'),
+('SemanticCacheInterceptor','Semantic Cache Interceptor',8, FALSE, 'Answers a repeated question from a cache before any model (ai-engine#40). OFF by default, and a pack must also declare orazaka.cache.mode. Runs after the Refiner row (same order, created later), before the Router.')
 ON CONFLICT (interceptor_key) DO NOTHING;
 
 -- ----------------------------------------------------------------------------
