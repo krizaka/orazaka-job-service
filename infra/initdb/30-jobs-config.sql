@@ -748,7 +748,7 @@ CREATE TABLE user_mcp_servers (
     label VARCHAR(255) NOT NULL,
     url VARCHAR(1000) NOT NULL,
     -- Sealed (v1.<key>.<wrapped>.<nonce>.<ciphertext>) for its owner, never in clear (orazaka-ai-engine#58, ADR-054).
-    auth_token VARCHAR(1000),
+    auth_token TEXT,
     enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -762,7 +762,7 @@ CREATE TABLE platform_mcp_servers (
     command VARCHAR(1000),
     args VARCHAR(2000),
     -- Sealed for the platform scope, never in clear (orazaka-ai-engine#58, ADR-054).
-    auth_token VARCHAR(1000),
+    auth_token TEXT,
     enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
