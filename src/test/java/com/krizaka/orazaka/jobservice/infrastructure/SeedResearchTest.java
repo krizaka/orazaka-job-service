@@ -67,6 +67,13 @@ class SeedResearchTest {
   }
 
   @Test
+  @DisplayName("the citation verifier is a pipeline row, OFF by default (ADR-087 slice 2)")
+  void theVerifierRowIsOff() {
+    assertThat(SEED)
+        .contains("('CitationVerifierInterceptor','Citation Verifier Interceptor',12, FALSE,");
+  }
+
+  @Test
   @DisplayName("the user agent is honest, never a browser's")
   void theUserAgentIsHonest() {
     assertThat(SEED)

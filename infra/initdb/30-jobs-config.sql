@@ -648,7 +648,9 @@ INSERT INTO pipeline_interceptor_config (interceptor_key, display_label, executi
 ('ToolInterceptor',        'Tool Interceptor',         9, TRUE,  'Tool callback attachment (demand-driven)'),
 ('MediaInterceptor',       'Media Interceptor',        10, TRUE, 'Base64 media extraction and multimodal assembly'),
 ('UserContextInterceptor', 'User Context Interceptor', 11, TRUE, 'Injects onboarding profile (industry, ai_behavior) as system constraints at inference'),
-('SemanticCacheInterceptor','Semantic Cache Interceptor',8, FALSE, 'Answers a repeated question from a cache before any model (ai-engine#40). OFF by default, and a pack must also declare orazaka.pipeline.cache.mode. Runs after the Refiner row (same order, created later), before the Router.')
+('SemanticCacheInterceptor','Semantic Cache Interceptor',8, FALSE, 'Answers a repeated question from a cache before any model (ai-engine#40). OFF by default, and a pack must also declare orazaka.pipeline.cache.mode. Runs after the Refiner row (same order, created later), before the Router.'),
+-- The verifier of grounded research (ADR-087 slice 2): OFF until the grounding flag of slice 5 turns it on per request.
+('CitationVerifierInterceptor','Citation Verifier Interceptor',12, FALSE, 'Checks every claim of a grounded answer against what research read (ADR-087). OFF by default.')
 ON CONFLICT (interceptor_key) DO NOTHING;
 
 -- ----------------------------------------------------------------------------
