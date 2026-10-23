@@ -747,6 +747,7 @@ CREATE TABLE user_mcp_servers (
     user_id VARCHAR(255) NOT NULL,
     label VARCHAR(255) NOT NULL,
     url VARCHAR(1000) NOT NULL,
+    -- Sealed (v1.<key>.<wrapped>.<nonce>.<ciphertext>) for its owner, never in clear (orazaka-ai-engine#58, ADR-054).
     auth_token VARCHAR(1000),
     enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -760,6 +761,7 @@ CREATE TABLE platform_mcp_servers (
     url VARCHAR(1000),
     command VARCHAR(1000),
     args VARCHAR(2000),
+    -- Sealed for the platform scope, never in clear (orazaka-ai-engine#58, ADR-054).
     auth_token VARCHAR(1000),
     enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -786,7 +788,8 @@ CREATE TABLE orazaka_tools_cache (
 );
 
 INSERT INTO platform_tool_configs (tool_id, cache_enabled, cache_ttl_seconds, rag_enabled, chunker_type, source_table) VALUES
-('searchWeb', TRUE, 3600, TRUE, 'MARKDOWN_CHUNKERS', 'orazaka_tools_rag_source')
+-- searchKnowledge reads the knowledge corpus, not the web; it was named searchWeb (orazaka-ai-engine#59, ADR-087).
+('searchKnowledge', TRUE, 3600, TRUE, 'MARKDOWN_CHUNKERS', 'orazaka_tools_rag_source')
 ON CONFLICT (tool_id) DO NOTHING;
 
 -- What the Studio form's model picker shows (command-to-file seconds and price from content/docs/measured-runs.md,
