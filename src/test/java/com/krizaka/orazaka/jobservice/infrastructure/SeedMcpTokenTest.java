@@ -8,8 +8,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * MCP server tokens are stored sealed (orazaka-ai-engine#58): the envelope of a long token is longer
- * than the token, so the column is TEXT, not VARCHAR(1000).
+ * MCP server tokens are stored sealed (orazaka-ai-engine#58): the envelope of a long token is
+ * longer than the token, so the column is TEXT, not VARCHAR(1000).
  */
 class SeedMcpTokenTest {
 
