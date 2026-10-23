@@ -834,9 +834,13 @@ CREATE TABLE IF NOT EXISTS research_source (
 );
 
 CREATE TABLE IF NOT EXISTS research_document (
+    -- The source that authorised every hop is part of the key: a hit is served only through that source, under its
+    -- current policy and freshness, so a credentialed or actor-scoped source never answers another (ADR-087 §5).
+    source_id      UUID        NOT NULL REFERENCES research_source(id) ON DELETE CASCADE,
+    -- The URL as requested (the lookup key) and the URL after redirects (what a citation names).
     url            TEXT        NOT NULL,
     content_hash   CHAR(64)    NOT NULL,
-    source_id      UUID        REFERENCES research_source(id) ON DELETE SET NULL,
+    final_url      TEXT        NOT NULL,
     fetched_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     http_status    SMALLINT    NOT NULL,
     content_type   VARCHAR(120),
@@ -846,9 +850,9 @@ CREATE TABLE IF NOT EXISTS research_document (
     title          TEXT,
     text           TEXT        NOT NULL,
     expires_at     TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (url, content_hash)
+    PRIMARY KEY (source_id, url, content_hash)
 );
-CREATE INDEX IF NOT EXISTS idx_research_document_fresh ON research_document (url, expires_at DESC);
+CREATE INDEX IF NOT EXISTS idx_research_document_fresh ON research_document (source_id, url, fetched_at DESC);
 
 CREATE TABLE IF NOT EXISTS research_fetch (
     id             BIGSERIAL   PRIMARY KEY,
@@ -885,6 +889,7 @@ INSERT INTO orazaka_runtime_config (config_key, config_value, value_type, descri
 ('research.enabled', 'false', 'boolean', 'Master switch of grounded research (ADR-087).'),
 ('research.max-searches', '3', 'int', 'Searches per answer, declared into the run budget of ADR-088.'),
 ('research.max-fetches', '8', 'int', 'Page fetches per answer, declared into the run budget of ADR-088.'),
+('research.max-calls', '16', 'int', 'Every billable research operation of one answer (searches, fetches, lookups, the checks of the verifier), declared into the run budget of ADR-088.'),
 ('research.fetch.timeout-ms', '10000', 'int', 'Connect + read time limit of one fetch.'),
 ('research.fetch.max-bytes', '2097152', 'int', 'Largest body read before extraction (2 MB).'),
 ('research.fetch.max-redirects', '3', 'int', 'Redirect hops followed, each one checked again.'),

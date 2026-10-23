@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Grounded research (ADR-087, orazaka-job-service#62) is data and is off until an administrator
- * turns it on. Read as text: the database applies it in the ITs (ProtectedJobRetentionIT).
+ * turns it on. Read as text here; {@code ResearchSchemaIT} applies the same block on PostgreSQL.
  */
 class SeedResearchTest {
 
@@ -31,14 +31,29 @@ class SeedResearchTest {
   }
 
   @Test
-  @DisplayName("the four tables exist, the cache keyed by URL and content hash")
+  @DisplayName("the four tables exist; the cache is keyed by source, URL and content hash")
   void theTablesExist() {
     assertThat(table("research_source"))
         .contains("source_key", "allow_patterns", "deny_patterns", "allows_personal_data")
         .contains("credential_ref", "enabled              BOOLEAN      NOT NULL DEFAULT FALSE");
+    // A hit is served only through the source that read it (ADR-087 §5), and a citation names
+    // the final URL: both are columns, and the source is in the key, never nullable.
     assertThat(table("research_document"))
-        .contains("PRIMARY KEY (url, content_hash)", "expires_at");
+        .contains("PRIMARY KEY (source_id, url, content_hash)", "expires_at")
+        .contains("source_id      UUID        NOT NULL", "final_url      TEXT        NOT NULL");
+    assertThat(SEED)
+        .contains(
+            "idx_research_document_fresh ON research_document (source_id, url, fetched_at DESC)");
     assertThat(table("research_consent")).contains("purpose", "revoked_at");
+  }
+
+  @Test
+  @DisplayName("one budget for every call: research.max-calls sits beside the narrower caps")
+  void oneBudgetForEveryCall() {
+    assertThat(SEED)
+        .contains("('research.max-searches', '3', 'int'")
+        .contains("('research.max-fetches', '8', 'int'")
+        .contains("('research.max-calls', '16', 'int'");
   }
 
   @Test

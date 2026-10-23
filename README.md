@@ -31,7 +31,8 @@ part of the [Orazaka platform](https://github.com/krizaka/orazaka) by [Krizaka](
 The asynchronous executor (port `8090`): drains `orazaka.jobs.interactive` and `orazaka.jobs.batch`,
 owns the capability registry (`/internal/v1/capabilities`) and worker registry
 (`/internal/v1/workers`). Owns `infra/initdb/30-jobs-config.sql` (jobs, outbox, dedup, config plane,
-capability seed).
+capability seed, and the grounded-research tables of ADR-087 — sources, the document cache keyed by source,
+URL and content hash, the fetch audit, consents — with research off and every source disabled by default).
 
 ## Position in the platform
 
