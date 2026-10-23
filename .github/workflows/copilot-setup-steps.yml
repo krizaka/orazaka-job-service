@@ -23,4 +23,4 @@ jobs:
           persist-credentials: false
       - uses: krizaka/orazaka/.github/actions/copilot-workspace@main
         with:
-          component: orazaka-job-service
+          component: ${{ github.event.repository.name }}
