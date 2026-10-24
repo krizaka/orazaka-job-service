@@ -32,7 +32,10 @@ The asynchronous executor (port `8090`): drains `orazaka.jobs.interactive` and `
 owns the capability registry (`/internal/v1/capabilities`) and worker registry
 (`/internal/v1/workers`). Owns `infra/initdb/30-jobs-config.sql` (jobs, outbox, dedup, config plane,
 capability seed, and the grounded-research tables of ADR-087 — sources, the document cache keyed by source,
-URL and content hash, the fetch audit, consents — with research off and every source disabled by default).
+URL and content hash, the fetch audit, consents — with research off and every source disabled by default; and the law corpus of ADR-089 — instruments, dated and
+hashed article versions, imports, the retrieval cache, rule proposals, the demand for unsupported kinds — with the
+`law.*` settings (default and bounds, enforced by the database, on `orazaka_runtime_config`) all off and the sources
+`law-corpus` and `donnees-quebec` disabled by default).
 
 ## Position in the platform
 
