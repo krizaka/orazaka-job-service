@@ -37,7 +37,7 @@ class SeedLawTest {
   void theTablesExist() {
     assertThat(table("law_instrument")).contains("UNIQUE (jurisdiction, code)", "source_key");
     assertThat(table("law_article_version"))
-        .contains("PRIMARY KEY (instrument_id, ref, language, content_hash)", "in_force_to");
+        .contains("PRIMARY KEY (instrument_id, ref, language, in_force_from)", "in_force_to");
     assertThat(table("law_import")).contains("'AUTOMATED','MANUAL'", "dataset_sha256");
     assertThat(table("law_retrieval"))
         .contains("PRIMARY KEY (jurisdiction, kind_id, as_of_bucket)");

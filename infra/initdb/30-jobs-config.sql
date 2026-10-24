@@ -992,7 +992,8 @@ CREATE TABLE IF NOT EXISTS law_import (
         CHECK (mode = 'AUTOMATED' OR (imported_by IS NOT NULL AND dataset_sha256 IS NOT NULL))
 );
 
--- A changed text is a new row; the previous row gets in_force_to. The hash is the SHA-256 of the article's text (label
+-- The key is the period, not the text: a reverted amendment brings back an earlier text, so its hash is already a row
+-- and the new period must still be a new row. A changed text is a new row; the previous row gets in_force_to. The hash is the SHA-256 of the article's text (label
 -- and subsections; the historical note is stored, not hashed), NFC, whitespace collapsed. asOf selects the version
 -- with in_force_from <= asOf < in_force_to.
 CREATE TABLE IF NOT EXISTS law_article_version (
@@ -1008,7 +1009,7 @@ CREATE TABLE IF NOT EXISTS law_article_version (
     import_id      UUID         NOT NULL REFERENCES law_import(id),
     first_seen_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
     last_seen_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    PRIMARY KEY (instrument_id, ref, language, content_hash),
+    PRIMARY KEY (instrument_id, ref, language, in_force_from),
     CONSTRAINT ck_law_article_version_span CHECK (in_force_to IS NULL OR in_force_to >= in_force_from)
 );
 -- At most one open version of an article: the importer closes the old row (in_force_to) before it writes the new one.
@@ -1016,6 +1017,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_law_article_version_open
     ON law_article_version (instrument_id, ref, language) WHERE in_force_to IS NULL;
 CREATE INDEX IF NOT EXISTS idx_law_article_version_as_of
     ON law_article_version (instrument_id, ref, language, in_force_from DESC);
+CREATE INDEX IF NOT EXISTS idx_law_article_version_hash
+    ON law_article_version (instrument_id, ref, language, content_hash);
 CREATE INDEX IF NOT EXISTS idx_law_article_version_import ON law_article_version (import_id);
 
 -- The cache of stage 2: the articles kept for a kind, with the verified claims, redone when one of them changes.

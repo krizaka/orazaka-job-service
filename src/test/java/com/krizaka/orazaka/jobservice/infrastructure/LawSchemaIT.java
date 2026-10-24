@@ -264,7 +264,43 @@ class LawSchemaIT extends AbstractContainerIntegrationTest {
                     + " 'law_article_version'::regclass AND i.indisprimary ORDER BY"
                     + " array_position(i.indkey, a.attnum)",
                 String.class))
-        .containsExactly("instrument_id", "ref", "language", "content_hash");
+        .containsExactly("instrument_id", "ref", "language", "in_force_from");
+  }
+
+  @Test
+  @Order(31)
+  @DisplayName("a reverted amendment is a new dated row: text A, B, A gives three rows, one open")
+  void aRevertIsANewDatedRow() {
+    jdbc.update(
+        "INSERT INTO law_import (source_key, mode, dataset_sha256) VALUES ('donnees-quebec',"
+            + " 'AUTOMATED', repeat('f', 64))");
+    String importId =
+        jdbc.queryForObject(
+            "SELECT id::text FROM law_import WHERE dataset_sha256 = repeat('f', 64)", String.class);
+    String insert =
+        "INSERT INTO law_article_version (instrument_id, ref, language, in_force_from, text,"
+            + " content_hash, import_id) SELECT id, '1932', 'fr', ?::date, ?, ?, ?::uuid FROM"
+            + " law_instrument WHERE code = 'CCQ-1991'";
+    String close =
+        "UPDATE law_article_version SET in_force_to = ?::date WHERE ref = '1932' AND in_force_to IS NULL";
+    jdbc.update(insert, "2020-01-01", "A", HASH_A, importId);
+    jdbc.update(close, "2022-01-01");
+    jdbc.update(insert, "2022-01-01", "B", HASH_B, importId);
+    jdbc.update(close, "2024-01-01");
+    jdbc.update(insert, "2024-01-01", "A", HASH_A, importId);
+
+    assertThat(count("SELECT count(*) FROM law_article_version WHERE ref = '1932'")).isEqualTo(3);
+    assertThat(
+            count(
+                "SELECT count(*) FROM law_article_version WHERE ref = '1932' AND in_force_to IS NULL"))
+        .isEqualTo(1);
+    assertThat(
+            count(
+                "SELECT count(*) FROM law_article_version WHERE ref = '1932' AND content_hash = '"
+                    + HASH_A
+                    + "'"))
+        .as("the same hash twice, two periods")
+        .isEqualTo(2);
   }
 
   @Test
