@@ -40,7 +40,7 @@ class SeedLawTest {
         .contains("PRIMARY KEY (instrument_id, ref, language, in_force_from)", "in_force_to");
     assertThat(table("law_import")).contains("'AUTOMATED','MANUAL'", "dataset_sha256");
     assertThat(table("law_retrieval"))
-        .contains("PRIMARY KEY (jurisdiction, kind_id, as_of_bucket)");
+        .contains("language", "PRIMARY KEY (jurisdiction, kind_id, language, as_of_bucket)");
     assertThat(table("rule_proposal"))
         .contains("'PROPOSED','REJECTED_AUTO','APPROVED','REJECTED','PROMOTED','SUPERSEDED'");
     assertThat(table("kind_demand")).contains("PRIMARY KEY (jurisdiction, kind_id)");
