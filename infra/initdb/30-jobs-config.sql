@@ -1025,6 +1025,8 @@ CREATE INDEX IF NOT EXISTS idx_law_article_version_import ON law_article_version
 CREATE TABLE IF NOT EXISTS law_retrieval (
     jurisdiction  VARCHAR(10) NOT NULL,
     kind_id       VARCHAR(80) NOT NULL,
+    -- The language of the claims: a French retrieval is never served for an English request.
+    language      VARCHAR(2)  NOT NULL CHECK (language IN ('fr','en')),
     -- The in_force_from of the newest article it used.
     as_of_bucket  DATE        NOT NULL,
     -- [{instrument, ref, language, contentHash}]
@@ -1034,7 +1036,7 @@ CREATE TABLE IF NOT EXISTS law_retrieval (
     run_id        UUID,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     stale         BOOLEAN     NOT NULL DEFAULT FALSE,
-    PRIMARY KEY (jurisdiction, kind_id, as_of_bucket)
+    PRIMARY KEY (jurisdiction, kind_id, language, as_of_bucket)
 );
 
 -- A proposal never leaves this table except through promotion (stage 5). An edit is a new proposal_revision.

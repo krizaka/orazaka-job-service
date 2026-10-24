@@ -404,11 +404,25 @@ class LawSchemaIT extends AbstractContainerIntegrationTest {
     assertThat(count("SELECT count FROM kind_demand WHERE kind_id = 'UNKNOWN'")).isEqualTo(2);
 
     String insertRetrieval =
-        "INSERT INTO law_retrieval (jurisdiction, kind_id, as_of_bucket) VALUES ('QC',"
-            + " 'visit-notice', DATE '2024-06-01')";
+        "INSERT INTO law_retrieval (jurisdiction, kind_id, language, as_of_bucket) VALUES ('QC',"
+            + " 'visit-notice', 'fr', DATE '2024-06-01')";
     jdbc.update(insertRetrieval);
     assertThatThrownBy(() -> jdbc.update(insertRetrieval))
-        .as("one retrieval per (jurisdiction, kind, bucket)")
+        .as("one retrieval per (jurisdiction, kind, language, bucket)")
+        .isInstanceOf(DataIntegrityViolationException.class);
+    jdbc.update(insertRetrieval.replace("'fr'", "'en'"));
+    assertThat(count("SELECT count(*) FROM law_retrieval WHERE kind_id = 'visit-notice'"))
+        .as("the same kind and bucket in the other language is another row")
+        .isEqualTo(2);
+    assertThatThrownBy(() -> jdbc.update(insertRetrieval.replace("'fr'", "'de'")))
+        .as("a retrieval is in French or English")
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(
+            () ->
+                jdbc.update(
+                    "INSERT INTO law_retrieval (jurisdiction, kind_id, as_of_bucket) VALUES ('QC',"
+                        + " 'x', DATE '2024-06-01')"))
+        .as("the language is required")
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
