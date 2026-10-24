@@ -990,6 +990,98 @@ class JobListenerTest {
     assertTrue(recordedTurns.isEmpty(), "a measured job is billed, not reconciled");
   }
 
+  /** A CALL-metered capability (an external check) whose executor reports {@code calls}. */
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> settledConsumptionOfACheckReporting(int calls, String messageId)
+      throws Exception {
+    String userId = UUID.randomUUID().toString();
+    lenient()
+        .when(capabilityManager.findByFeatureKey(anyString()))
+        .thenReturn(
+            Optional.of(
+                new CapabilityDeclaration(
+                    "orazaka.core.checks.courtrecords",
+                    "text.generate",
+                    "job.checks.verify",
+                    "CALL",
+                    "CHAT",
+                    "INTERACTIVE",
+                    "{}",
+                    "{}",
+                    true)));
+    when(userDirectoryService.getUser(userId))
+        .thenReturn(
+            new User(
+                UUID.fromString(userId),
+                "u",
+                "u@example.com",
+                true,
+                Set.of("ROLE_USER"),
+                Map.of()));
+    when(chatStrategy.execute(any(), any()))
+        .thenReturn(
+            JobExecutionResult.measured(
+                Map.of("outcome", calls == 1 ? "NO_MATCH" : "TIMEOUT"),
+                Map.of("calls", calls),
+                "mock"));
+
+    listener.onMessage(
+        new JobCommand(
+            "job-calls-" + calls,
+            userId,
+            "orazaka.core.checks.courtrecords",
+            "mock",
+            Map.of("subjectId", "s-1", "holdId", "hold-68"),
+            com.krizaka.orazaka.jobs.domain.model.DataClass.STANDARD),
+        messageId);
+
+    org.mockito.ArgumentCaptor<Map<String, Object>> consumption =
+        org.mockito.ArgumentCaptor.forClass(Map.class);
+    verify(jobEventPublisher)
+        .emitDone(eq("job-calls-" + calls), eq("hold-68"), any(), any(), consumption.capture());
+    return consumption.getValue();
+  }
+
+  @Test
+  void aCheckThatReportsZeroCalls_releasesItsHoldInFull_andRecordsNoFreeTurn() throws Exception {
+    // orazaka-job-service#68: a paid stage that did not answer settles at zero. The CALL unit is
+    // priced at one per terminal outcome, so the done event carries no consumption at all, and
+    // billing releases the hold in full.
+    Map<String, Object> settled = settledConsumptionOfACheckReporting(0, null);
+
+    assertTrue(settled.isEmpty(), "calls: 0 settles nothing: " + settled);
+    assertTrue(recordedTurns.isEmpty(), "no paid call was made: nothing to reconcile");
+  }
+
+  @Test
+  void aCheckThatReportsOneCall_settlesOnePricebookCall() throws Exception {
+    Map<String, Object> settled = settledConsumptionOfACheckReporting(1, null);
+
+    assertEquals(1, settled.get("calls"), "calls crosses as a measurement: " + settled);
+    assertTrue(recordedTurns.isEmpty(), "a CALL-metered job with a call is billed");
+  }
+
+  @Test
+  void aRedeliveredCheck_isSettledOnce() throws Exception {
+    // A retry of the same message is skipped by the dedup: one execution, one settlement.
+    when(messageDedupService.claim("job.executor", "m-68")).thenReturn(true, false);
+    settledConsumptionOfACheckReporting(1, "m-68");
+
+    listener.onMessage(
+        new JobCommand(
+            "job-calls-1",
+            UUID.randomUUID().toString(),
+            "orazaka.core.checks.courtrecords",
+            "mock",
+            Map.of("subjectId", "s-1", "holdId", "hold-68"),
+            com.krizaka.orazaka.jobs.domain.model.DataClass.STANDARD),
+        "m-68");
+
+    verify(chatStrategy, org.mockito.Mockito.times(1)).execute(any(), any());
+    verify(jobEventPublisher, org.mockito.Mockito.times(1))
+        .emitDone(eq("job-calls-1"), eq("hold-68"), any(), any(), any());
+  }
+
   @Test
   void theClassAStudioPublishesByName_isReadBackAsTheClass() {
     // The studio publishes a map, not this record (AmqpStepExecutionAdapter): the class crosses the
