@@ -101,7 +101,8 @@ public class JobListener {
           "height",
           "characters",
           "audioSeconds",
-          "tokens");
+          "tokens",
+          CallConsumption.CALLS);
 
   private final JobPersistenceProvider jobPersistenceProvider;
   private final JobEventPublisher jobEventPublisher;
@@ -373,8 +374,10 @@ public class JobListener {
         long startedAt = System.nanoTime();
         JobExecutionResult executed = dispatchToExecutor(message, context);
         Map<String, Object> result = executed.output();
+        // calls: 0 (a paid step that did not answer) settles nothing: no consumption, the hold is
+        // released in full (orazaka-job-service#68).
         Map<String, Object> consumption =
-            measureConsumption(startedAt, result, executed.consumption());
+            CallConsumption.toSettle(measureConsumption(startedAt, result, executed.consumption()));
         saveOutputResult(message.userId(), message.jobId(), result);
         // Before the job is reported complete: a turn served without a measurement its unit can
         // price is free inference, and free inference is recorded rather than shrugged off
@@ -412,7 +415,9 @@ public class JobListener {
    * priced per model is billing's judgement, not this listener's.
    */
   private void recordIfUnmetered(JobCommand message, Map<String, Object> consumption) {
-    if (message.holdId() == null) {
+    // A step that reported calls: 0 made no paid call: nothing was served free, nothing to
+    // reconcile.
+    if (message.holdId() == null || consumption.isEmpty()) {
       return;
     }
     Optional<CapabilityDeclaration> capability =
