@@ -268,9 +268,12 @@ class LawSchemaIT extends AbstractContainerIntegrationTest {
   }
 
   @Test
-  @Order(31)
+  @Order(8)
   @DisplayName("a reverted amendment is a new dated row: text A, B, A gives three rows, one open")
   void aRevertIsANewDatedRow() {
+    jdbc.update(
+        "INSERT INTO law_instrument (jurisdiction, code, official_url_template, source_key) VALUES"
+            + " ('QC', 'CCQ-1991', 'x', 'donnees-quebec') ON CONFLICT DO NOTHING");
     jdbc.update(
         "INSERT INTO law_import (source_key, mode, dataset_sha256) VALUES ('donnees-quebec',"
             + " 'AUTOMATED', repeat('f', 64))");
