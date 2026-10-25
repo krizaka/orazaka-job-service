@@ -535,14 +535,17 @@ public class JobListener {
   /**
    * The typed cause of a failure this executor did not declare itself (ADR-053).
    *
-   * <p>Only two things are read from the exception, and both are structural rather than textual: a
-   * dependency this executor could not reach is {@code PLATFORM_UNAVAILABLE}, and everything else
-   * is {@code EXECUTOR_FAULT}. There is no branch that produces {@code INPUT_INVALID} here — that
-   * cause must come from a validator that <i>declared</i> the payload unusable, never from an
-   * exception that merely happened while user data was in scope.
+   * <p>Only types are read from the exception, never its text: a dependency this executor could not
+   * reach is {@code PLATFORM_UNAVAILABLE}, and everything else is {@code EXECUTOR_FAULT}. {@code
+   * INPUT_INVALID} comes only from a validator that <i>declared</i> the payload unusable — an
+   * executor throwing {@link InvalidJobInputException} — never from an exception that merely
+   * happened while user data was in scope (ADR-046 §2).
    */
   private static FailureCause causeOf(Throwable failure) {
     for (Throwable current = failure; current != null; current = current.getCause()) {
+      if (current instanceof InvalidJobInputException) {
+        return FailureCause.INPUT_INVALID;
+      }
       // The operator switched the engine off (ADR-062). Our decision, not the user's input and not
       // a gate's refusal: it releases the hold and blames nobody, like any platform outage.
       if (current
