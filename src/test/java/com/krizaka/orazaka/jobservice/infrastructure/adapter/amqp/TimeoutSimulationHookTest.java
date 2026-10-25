@@ -57,4 +57,22 @@ class TimeoutSimulationHookTest {
 
     assertFalse(t.isAlive());
   }
+
+  @Test
+  void timeoutSeconds_simulationShortensATimeoutPrompt_only() {
+    var timeout = new JobCommand("job-1", "user-1", "feature", Map.of("prompt", "TIMEOUT NOW"));
+    var normal = new JobCommand("job-2", "user-1", "feature", Map.of("prompt", "hello"));
+    org.junit.jupiter.api.Assertions.assertEquals(
+        TimeoutSimulationHook.SIMULATED_TIMEOUT_SECONDS, hook.timeoutSeconds(timeout, 300));
+    org.junit.jupiter.api.Assertions.assertEquals(300, hook.timeoutSeconds(normal, 300));
+  }
+
+  @Test
+  void timeoutSeconds_productionNeverLetsAPromptChooseItsTimeout() {
+    // The external audit's finding (krizaka-blog#132): without the simulations switch, « TIMEOUT… »
+    // keeps the configured timeout.
+    var timeout = new JobCommand("job-1", "user-1", "feature", Map.of("prompt", "TIMEOUT NOW"));
+    org.junit.jupiter.api.Assertions.assertEquals(
+        300, JobSimulationHook.NOOP.timeoutSeconds(timeout, 300));
+  }
 }

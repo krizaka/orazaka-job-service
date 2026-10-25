@@ -21,6 +21,17 @@ class TimeoutSimulationHook implements JobSimulationHook {
 
   private static final Logger logger = LoggerFactory.getLogger(TimeoutSimulationHook.class);
 
+  /** The simulation's short timeout, so a simulated hang ends quickly in tests. */
+  static final int SIMULATED_TIMEOUT_SECONDS = 5; // @fixed: the test simulation's own timeout
+
+  @Override
+  public int timeoutSeconds(JobCommand message, int configuredSeconds) {
+    String prompt = message.prompt();
+    return prompt != null && prompt.startsWith("TIMEOUT")
+        ? SIMULATED_TIMEOUT_SECONDS
+        : configuredSeconds;
+  }
+
   @Override
   public void beforeExecution(JobCommand message, int timeoutSeconds) {
     String prompt = message.prompt();

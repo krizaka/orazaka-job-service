@@ -693,12 +693,13 @@ public class JobListener {
             .collect(java.util.stream.Collectors.toSet()));
   }
 
+  /**
+   * The configured timeout. Only the test simulation hook (enabled by {@code
+   * orazaka.jobs.enable-test-simulations}) may shorten it: a prompt is user input and never sets
+   * its own timeout (found by an external audit, krizaka-blog#132).
+   */
   private int resolveTimeout(JobCommand message) {
-    String prompt = message.prompt();
-    if (prompt != null && prompt.startsWith("TIMEOUT")) {
-      return 5;
-    }
-    return jobTimeoutSeconds;
+    return simulationHook.timeoutSeconds(message, jobTimeoutSeconds);
   }
 
   /**
