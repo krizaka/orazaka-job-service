@@ -9,6 +9,8 @@ import com.krizaka.orazaka.jobs.domain.model.CapabilityDeclaration;
 import com.krizaka.orazaka.jobs.domain.model.JobCommand;
 import com.krizaka.orazaka.jobs.domain.model.JobExecutionResult;
 import com.krizaka.orazaka.jobservice.application.service.ContextService;
+import com.krizaka.orazaka.jobservice.infrastructure.adapter.checks.ExternalCheckStrategy;
+import com.krizaka.orazaka.jobservice.infrastructure.adapter.checks.MockProviderKeyStore;
 import com.krizaka.orazaka.jobservice.infrastructure.config.JobsProperties;
 import com.krizaka.orazaka.persistence.domain.model.JobDto;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.CapabilityManager;
@@ -1080,6 +1082,154 @@ class JobListenerTest {
     verify(chatStrategy, org.mockito.Mockito.times(1)).execute(any(), any());
     verify(jobEventPublisher, org.mockito.Mockito.times(1))
         .emitDone(eq("job-calls-1"), eq("hold-68"), any(), any(), any());
+  }
+
+  /**
+   * The real executor of the external checks behind this listener (orazaka-packs#138), on the mock
+   * connector: what a check job reports is what its hold settles.
+   */
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> settledConsumptionOfACheckJobOn(String lastName) throws Exception {
+    JobListener checks = listenerServing(checkStrategy());
+    String userId = UUID.randomUUID().toString();
+    whenAUserExists(userId);
+    String jobId = "job-check-" + lastName;
+
+    checks.onMessage(checkJob(jobId, userId, lastName), null);
+
+    org.mockito.ArgumentCaptor<Map<String, Object>> consumption =
+        org.mockito.ArgumentCaptor.forClass(Map.class);
+    verify(jobEventPublisher)
+        .emitDone(eq(jobId), eq("hold-138"), eq("mock"), any(), consumption.capture());
+    return consumption.getValue();
+  }
+
+  @Test
+  void aCheckJobTheProviderDidNotAnswer_releasesItsHoldInFull() throws Exception {
+    // Roy is the mock's PROVIDER_ERROR: calls 0, so the done event carries no consumption.
+    Map<String, Object> settled = settledConsumptionOfACheckJobOn("Roy");
+
+    assertTrue(settled.isEmpty(), "calls: 0 settles nothing: " + settled);
+    assertTrue(recordedTurns.isEmpty(), "no paid call was made: nothing to reconcile");
+  }
+
+  @Test
+  void aCheckJobTheProviderAnswered_settlesOneCall() throws Exception {
+    // Gagnon is the mock's NO_MATCH: an answer, so one CALL is settled.
+    Map<String, Object> settled = settledConsumptionOfACheckJobOn("Gagnon");
+
+    assertEquals(1, settled.get("calls"), "one call crosses as a measurement: " + settled);
+    assertTrue(recordedTurns.isEmpty(), "a CALL-metered job with a call is billed");
+  }
+
+  @Test
+  void aCheckJobOffItsContract_failsAsInputInvalid_withNoValueInTheError() throws Exception {
+    JobListener checks = listenerServing(checkStrategy());
+    String userId = UUID.randomUUID().toString();
+    whenAUserExists(userId);
+    JobCommand job = checkJob("job-check-bad", userId, "Tremblay");
+    Map<String, Object> payload = new java.util.HashMap<>(job.payload());
+    payload.put("subject", "Tremblay, Marie");
+
+    checks.onMessage(
+        new JobCommand(
+            job.jobId(),
+            userId,
+            job.featureKey(),
+            job.model(),
+            payload,
+            com.krizaka.orazaka.jobs.domain.model.DataClass.SENSITIVE),
+        null);
+
+    org.mockito.ArgumentCaptor<String> error = org.mockito.ArgumentCaptor.forClass(String.class);
+    verify(jobEventPublisher)
+        .emitError(
+            eq("job-check-bad"),
+            eq("hold-138"),
+            eq(com.krizaka.orazaka.jobs.domain.model.FailureCause.INPUT_INVALID),
+            error.capture());
+    assertFalse(error.getValue().contains("Tremblay"), error.getValue());
+  }
+
+  private static ExternalCheckStrategy checkStrategy() {
+    return new ExternalCheckStrategy(
+        new com.krizaka.orazaka.core.infrastructure.checks.MockConnector(),
+        new MockProviderKeyStore(),
+        line -> {},
+        () -> Optional.of(new byte[32]),
+        java.time.Clock.systemUTC());
+  }
+
+  private JobListener listenerServing(com.krizaka.orazaka.jobs.domain.port.JobExecutor executor) {
+    lenient()
+        .when(capabilityManager.findByFeatureKey("orazaka.core.checks.courtrecords"))
+        .thenReturn(
+            Optional.of(
+                new CapabilityDeclaration(
+                    "orazaka.core.checks.courtrecords",
+                    executor.handlerKey(),
+                    "job.text.process",
+                    "CALL",
+                    "EXTERNAL_CHECK",
+                    "INTERACTIVE",
+                    "{}",
+                    "{}",
+                    true)));
+    ExecutorService direct = mock(ExecutorService.class);
+    lenient()
+        .doAnswer(
+            invocation -> {
+              ((Runnable) invocation.getArgument(0)).run();
+              return null;
+            })
+        .when(direct)
+        .execute(any(Runnable.class));
+    return new JobListener(
+        jobPersistenceProvider,
+        jobEventPublisher,
+        List.of(chatStrategy, executor),
+        tempDir.toString(),
+        direct,
+        new JobsProperties(5),
+        objectMapper,
+        Optional.empty(),
+        userDirectoryService,
+        contextService,
+        capabilityManager,
+        messageDedupService,
+        assets,
+        unmeteredTurns,
+        runningJobs,
+        com.krizaka.orazaka.jobservice.durable.DurableMirror.localOnly());
+  }
+
+  private void whenAUserExists(String userId) {
+    when(userDirectoryService.getUser(userId))
+        .thenReturn(
+            new User(
+                UUID.fromString(userId),
+                "u",
+                "u@example.com",
+                true,
+                Set.of("ROLE_USER"),
+                Map.of()));
+  }
+
+  /** A court-records job with its own hold, as a producer that held it sends it. */
+  private static JobCommand checkJob(String jobId, String userId, String lastName) {
+    return new JobCommand(
+        jobId,
+        userId,
+        "orazaka.core.checks.courtrecords",
+        "default",
+        Map.of(
+            "subject",
+            Map.of("subjectId", "subject-42", "lastName", lastName, "firstName", "Marie"),
+            "consentedPurposes",
+            List.of("COURT_RECORDS"),
+            "holdId",
+            "hold-138"),
+        com.krizaka.orazaka.jobs.domain.model.DataClass.SENSITIVE);
   }
 
   @Test

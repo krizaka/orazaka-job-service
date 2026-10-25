@@ -37,6 +37,17 @@ hashed article versions, imports, the retrieval cache, rule proposals, the deman
 `law.*` settings (default and bounds, enforced by the database, on `orazaka_runtime_config`) all off and the sources
 `law-corpus` and `donnees-quebec` disabled by default).
 
+**External checks** (orazaka-packs#138): the engine's `orazaka.core.checks.courtrecords`, `.credit` and `.identity`
+run here through one executor, handler key `check.external` (`ExternalCheckStrategy`), on the engine's
+`ExternalCheckService` and the mock connector until the pilot's go. Step inputs `subject` and `consentedPurposes` (a
+purpose is granted only when listed); outputs `outcome`, `refusal`, `category`, `providerRef`, `calls` and
+`resultJson`; consumption `{calls: 0|1}` (0 releases the hold, 1 settles one `CALL` of `EXTERNAL_CHECK`). The job's
+own hold covers the call (no second hold); a job with no hold is refused `BUDGET_EXHAUSTED`. Every call is audited in
+`external_check_audit` (append-only, the subject as a keyed HMAC, no personal data). Fails closed until an operator
+seals `checks.subject-pepper` — the seed leaves it absent. An input off the contract fails as `INPUT_INVALID`
+(`InvalidJobInputException`). `ExecutorRegistryFitnessTest` [EXEC-003] keeps the seeded `handler_key`s and the
+executors in step, both ways.
+
 ## Position in the platform
 
 | | |
