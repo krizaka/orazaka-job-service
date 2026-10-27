@@ -1,5 +1,6 @@
 package com.krizaka.orazaka.jobservice.infrastructure.adapter.checks;
 
+import com.krizaka.orazaka.core.application.checks.CheckRouter;
 import com.krizaka.orazaka.core.application.checks.ExternalCheckService;
 import com.krizaka.orazaka.core.domain.model.checks.CheckCall;
 import com.krizaka.orazaka.core.domain.model.checks.CheckPurpose;
@@ -94,7 +95,7 @@ public final class ExternalCheckStrategy implements JobExecutor {
     CheckStepInput input = CheckStepInput.parse(command.payload());
     ExternalCheckService door =
         new ExternalCheckService(
-            connector,
+            CheckRouter.fixed(connector),
             new JobConsents(input.subject().subjectId(), input.consented()),
             keys,
             audit,
