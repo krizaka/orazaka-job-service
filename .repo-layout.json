@@ -1,0 +1,5 @@
+{
+  "allow": [
+    { "path": "archunit_store", "why": "ArchUnit freeze store (freeze.store.path), read and written by the architecture tests to freeze known violations" }
+  ]
+}

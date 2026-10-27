@@ -44,3 +44,5 @@ The org code rules (addendum 2026-10-15) are checked by tools, not by review.
 4. The change ships with its tests — a unit test for logic, a Testcontainers integration test for an adapter, an
    endpoint or a flow; a fix starts with a failing test that reproduces the bug. CI runs them and must be green; no
    test = not done (workspace [`AGENTS.md` §9](https://github.com/krizaka/orazaka/blob/main/AGENTS.md#9-testing)).
+
+**Repository layout:** the root follows [krizaka/.github `docs/standards/repo-layout.md`](https://github.com/krizaka/.github/blob/main/docs/standards/repo-layout.md); the CI guard `check-repo-layout` fails on a stray root file, and a justified extra is declared in `.repo-layout.json` with its why.
