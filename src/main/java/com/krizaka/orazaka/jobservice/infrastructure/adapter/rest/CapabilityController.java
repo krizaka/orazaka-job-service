@@ -5,7 +5,6 @@ import com.krizaka.orazaka.jobs.domain.model.CapabilityDeclaration;
 import com.krizaka.orazaka.jobs.domain.model.CapabilityRoute;
 import com.krizaka.orazaka.jobs.domain.port.CapabilityRoutingClient;
 import com.krizaka.orazaka.jobservice.application.service.CapabilityRegistryService;
-import com.krizaka.orazaka.jobservice.application.service.InvalidCapabilityDeclarationException;
 import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -113,14 +112,17 @@ class CapabilityController {
   }
 
   /**
-   * An invalid registration is the caller's to fix: 422 with the reason, never a 500.
+   * An invalid registration (an empty or unknown billableCapability, a declaration the contract
+   * refuses) is the caller's to fix: 422 with the reason, never a 500. A plain {@code
+   * IllegalArgumentException} on purpose: a dedicated type in {@code application.service} would be
+   * a new edge of the frozen application/infrastructure cycle.
    *
    * @param failure the refused declaration
    * @return the message naming the capability and the accepted values
    */
-  @ExceptionHandler(InvalidCapabilityDeclarationException.class)
+  @ExceptionHandler(IllegalArgumentException.class)
   @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
-  String invalidDeclaration(InvalidCapabilityDeclarationException failure) {
+  String invalidDeclaration(IllegalArgumentException failure) {
     return failure.getMessage();
   }
 }

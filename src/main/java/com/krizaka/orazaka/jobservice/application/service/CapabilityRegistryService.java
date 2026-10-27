@@ -60,8 +60,8 @@ public class CapabilityRegistryService {
    * @param featureKey the key from the path, authoritative over the declaration's own
    * @param declaration the row to write
    * @return the capability as stored
-   * @throws InvalidCapabilityDeclarationException when the declaration does not say what it bills
-   *     as, or says something the platform does not know
+   * @throws IllegalArgumentException (answered 422 by the controller) when the declaration does not
+   *     say what it bills as, or says something the platform does not know
    */
   @Transactional
   public CapabilityDeclaration register(String featureKey, CapabilityDeclaration declaration) {
@@ -93,7 +93,7 @@ public class CapabilityRegistryService {
   private static void requireDeclaredBilling(String featureKey, CapabilityDeclaration declaration) {
     String billable = declaration.billableCapability();
     if (billable == null || billable.isBlank()) {
-      throw new InvalidCapabilityDeclarationException(
+      throw new IllegalArgumentException(
           "Capability "
               + featureKey
               + " leaves billableCapability empty: declare one of "
@@ -103,7 +103,7 @@ public class CapabilityRegistryService {
               + " for a step that is not billable)");
     }
     if (!BILLABLE_CAPABILITIES.contains(billable)) {
-      throw new InvalidCapabilityDeclarationException(
+      throw new IllegalArgumentException(
           "Capability "
               + featureKey
               + " declares an unknown billableCapability '"

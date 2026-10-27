@@ -11,7 +11,6 @@ import com.krizaka.orazaka.jobs.domain.model.CapabilityDeclaration;
 import com.krizaka.orazaka.jobs.domain.model.CapabilityRoute;
 import com.krizaka.orazaka.jobs.domain.port.CapabilityRoutingClient;
 import com.krizaka.orazaka.jobservice.application.service.CapabilityRegistryService;
-import com.krizaka.orazaka.jobservice.application.service.InvalidCapabilityDeclarationException;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -94,12 +93,11 @@ class CapabilityControllerTest {
   @Test
   @DisplayName("An invalid declaration answers 422 with the reason, never a 500")
   void invalidDeclarationIsUnprocessable() throws NoSuchMethodException {
-    assertThat(controller.invalidDeclaration(new InvalidCapabilityDeclarationException("empty")))
+    assertThat(controller.invalidDeclaration(new IllegalArgumentException("empty")))
         .isEqualTo("empty");
     assertThat(
             CapabilityController.class
-                .getDeclaredMethod(
-                    "invalidDeclaration", InvalidCapabilityDeclarationException.class)
+                .getDeclaredMethod("invalidDeclaration", IllegalArgumentException.class)
                 .getAnnotation(org.springframework.web.bind.annotation.ResponseStatus.class)
                 .value())
         .isEqualTo(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY);

@@ -40,7 +40,7 @@ class CapabilityRegistryServiceTest {
   void refusesAnUndeclaredOrUnknownBilling(String billable) {
     assertThatThrownBy(
             () -> service.register("orazaka.screening.plan", declaration(billable, null)))
-        .isInstanceOf(InvalidCapabilityDeclarationException.class)
+        .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("orazaka.screening.plan")
         .hasMessageContaining("NONE");
 
