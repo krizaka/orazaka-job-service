@@ -167,7 +167,7 @@ CREATE TABLE orazaka_capabilities (
     -- constraint is named so the EXTERNAL CHECKS block below can widen an existing database's.
     billable_capability VARCHAR(20) NOT NULL DEFAULT 'CHAT'
                         CONSTRAINT ck_orazaka_capabilities_billable_capability
-                        CHECK (billable_capability IN ('CHAT','IMAGE','AUDIO','VIDEO','AGENT','EXTERNAL_CHECK')),
+                        CHECK (billable_capability IN ('CHAT','IMAGE','AUDIO','VIDEO','AGENT','EXTERNAL_CHECK','NONE')),
     -- WHICH LANE this capability's work waits in (ADR-067). Two classes, never three, and they name
     -- the USER'S RELATIONSHIP TO THE WAIT rather than a rank — nobody argues for a promotion to a
     -- class that means "I am waiting":
@@ -1118,11 +1118,11 @@ ON CONFLICT (source_key) DO NOTHING;
 -- ============================================================================
 
 -- billable_capability EXTERNAL_CHECK, priced by the (EXTERNAL_CHECK, <provider>, CALL) rows of credit_pricebook
--- (krizaka-billing#57). A database created before this block has the column's unnamed CHECK without it.
+-- (krizaka-billing#57), and NONE: declared not billable on its own (orazaka-packs#162). A database created before this block has the column's unnamed CHECK without it.
 ALTER TABLE orazaka_capabilities DROP CONSTRAINT IF EXISTS orazaka_capabilities_billable_capability_check;
 ALTER TABLE orazaka_capabilities DROP CONSTRAINT IF EXISTS ck_orazaka_capabilities_billable_capability;
 ALTER TABLE orazaka_capabilities ADD CONSTRAINT ck_orazaka_capabilities_billable_capability
-    CHECK (billable_capability IN ('CHAT','IMAGE','AUDIO','VIDEO','AGENT','EXTERNAL_CHECK'));
+    CHECK (billable_capability IN ('CHAT','IMAGE','AUDIO','VIDEO','AGENT','EXTERNAL_CHECK','NONE'));
 
 -- The audit of the checks (the engine's CheckAudit): one line per call, refused or not. No name, no birth date,
 -- no address, no record content: the subject is a keyed HMAC-SHA-256 of its opaque id (subject_ref), the provider

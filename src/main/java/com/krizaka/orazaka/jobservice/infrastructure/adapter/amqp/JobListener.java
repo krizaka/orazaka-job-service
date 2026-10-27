@@ -424,7 +424,8 @@ public class JobListener {
         capabilityManager.findByFeatureKey(message.featureKey());
     String unit = capability.map(CapabilityDeclaration::billableUnit).orElse(null);
     String billable = capability.map(CapabilityDeclaration::billableCapability).orElse(null);
-    if (unit == null || billable == null) {
+    // NONE: declared not billable (orazaka-packs#162), so there is no pricebook row to reconcile.
+    if (unit == null || billable == null || "NONE".equals(billable)) {
       return;
     }
     ConsumptionReport report = objectMapper.convertValue(consumption, ConsumptionReport.class);

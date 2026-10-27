@@ -129,12 +129,13 @@ class SeedExternalChecksTest {
   }
 
   @Test
-  @DisplayName("EXTERNAL_CHECK is a billable capability the table accepts, fresh or migrated")
+  @DisplayName(
+      "EXTERNAL_CHECK and NONE are billing declarations the table accepts, fresh or migrated")
   void theConstraintAcceptsExternalCheck() {
     assertThat(SEED)
         .containsPattern(
             "CONSTRAINT ck_orazaka_capabilities_billable_capability\\s+CHECK \\(billable_capability"
-                + " IN \\('CHAT','IMAGE','AUDIO','VIDEO','AGENT','EXTERNAL_CHECK'\\)\\)")
+                + " IN \\('CHAT','IMAGE','AUDIO','VIDEO','AGENT','EXTERNAL_CHECK','NONE'\\)\\)")
         .contains(
             "ALTER TABLE orazaka_capabilities DROP CONSTRAINT IF EXISTS"
                 + " orazaka_capabilities_billable_capability_check;");

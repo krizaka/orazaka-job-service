@@ -89,4 +89,17 @@ class CapabilityControllerTest {
 
     assertThat(controller.unregister("orazaka.doc.extract").getStatusCode().value()).isEqualTo(204);
   }
+
+  @Test
+  @DisplayName("An invalid declaration answers 422 with the reason, never a 500")
+  void invalidDeclarationIsUnprocessable() throws NoSuchMethodException {
+    assertThat(controller.invalidDeclaration(new IllegalArgumentException("empty")))
+        .isEqualTo("empty");
+    assertThat(
+            CapabilityController.class
+                .getDeclaredMethod("invalidDeclaration", IllegalArgumentException.class)
+                .getAnnotation(org.springframework.web.bind.annotation.ResponseStatus.class)
+                .value())
+        .isEqualTo(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY);
+  }
 }

@@ -110,4 +110,19 @@ class CapabilityController {
   String unroutable(UnroutableCapabilityException failure) {
     return failure.getMessage();
   }
+
+  /**
+   * An invalid registration (an empty or unknown billableCapability, a declaration the contract
+   * refuses) is the caller's to fix: 422 with the reason, never a 500. A plain {@code
+   * IllegalArgumentException} on purpose: a dedicated type in {@code application.service} would be
+   * a new edge of the frozen application/infrastructure cycle.
+   *
+   * @param failure the refused declaration
+   * @return the message naming the capability and the accepted values
+   */
+  @ExceptionHandler(IllegalArgumentException.class)
+  @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+  String invalidDeclaration(IllegalArgumentException failure) {
+    return failure.getMessage();
+  }
 }
