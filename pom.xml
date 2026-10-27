@@ -22,6 +22,15 @@
         <connection>scm:git:https://github.com/krizaka/orazaka-job-service.git</connection>
         <developerConnection>scm:git:git@github.com:krizaka/orazaka-job-service.git</developerConnection>
     </scm>
+    <licenses>
+        <license>
+            <name>FSL-1.1-ALv2</name>
+            <url>https://fsl.software/FSL-1.1-ALv2.template.md</url>
+            <distribution>repo</distribution>
+            <comments>Functional Source License 1.1, Apache-2.0 future licence (ADR-011). Earlier commits: Apache-2.0.</comments>
+        </license>
+    </licenses>
+
 
     <properties>
         <!-- GitHub Packages repository this artifact is published to (orazaka-parent). -->
