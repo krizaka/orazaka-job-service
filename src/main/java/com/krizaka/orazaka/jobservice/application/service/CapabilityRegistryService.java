@@ -6,6 +6,7 @@ import com.krizaka.orazaka.persistence.domain.model.OutboxMessage;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.CapabilityManager;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.OutboxStore;
 import com.krizaka.orazaka.persistence.infrastructure.config.MessagingContract;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,16 @@ public class CapabilityRegistryService {
 
   private static final String CAPABILITY_AGGREGATE = "capability";
 
+  /**
+   * What a capability may bill as: the billing capabilities plus {@code NONE}, the explicit "not
+   * billable on its own" of a step that only orchestrates or presents (orazaka-packs#162).
+   * Declared, never inferred: an empty value is refused, not defaulted.
+   */
+  static final String NOT_BILLABLE = "NONE";
+
+  static final List<String> BILLABLE_CAPABILITIES =
+      List.of("CHAT", "IMAGE", "AUDIO", "VIDEO", "AGENT", "EXTERNAL_CHECK", NOT_BILLABLE);
+
   private final CapabilityManager capabilityManager;
   private final OutboxStore outboxStore;
 
@@ -49,10 +60,13 @@ public class CapabilityRegistryService {
    * @param featureKey the key from the path, authoritative over the declaration's own
    * @param declaration the row to write
    * @return the capability as stored
+   * @throws InvalidCapabilityDeclarationException when the declaration does not say what it bills
+   *     as, or says something the platform does not know
    */
   @Transactional
   public CapabilityDeclaration register(String featureKey, CapabilityDeclaration declaration) {
     Objects.requireNonNull(declaration, "declaration must not be null");
+    requireDeclaredBilling(featureKey, declaration);
     CapabilityDeclaration saved = capabilityManager.save(toDto(featureKey, declaration));
     announce(saved.featureKey(), saved.enabled());
     return toDeclaration(saved);
@@ -74,6 +88,29 @@ public class CapabilityRegistryService {
     // shape for removal would mean every consumer learning two ways to hear the same news.
     announce(featureKey, false);
     return true;
+  }
+
+  private static void requireDeclaredBilling(String featureKey, CapabilityDeclaration declaration) {
+    String billable = declaration.billableCapability();
+    if (billable == null || billable.isBlank()) {
+      throw new InvalidCapabilityDeclarationException(
+          "Capability "
+              + featureKey
+              + " leaves billableCapability empty: declare one of "
+              + BILLABLE_CAPABILITIES
+              + " ("
+              + NOT_BILLABLE
+              + " for a step that is not billable)");
+    }
+    if (!BILLABLE_CAPABILITIES.contains(billable)) {
+      throw new InvalidCapabilityDeclarationException(
+          "Capability "
+              + featureKey
+              + " declares an unknown billableCapability '"
+              + billable
+              + "': expected one of "
+              + BILLABLE_CAPABILITIES);
+    }
   }
 
   private void announce(String featureKey, boolean enabled) {

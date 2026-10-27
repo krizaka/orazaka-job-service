@@ -5,6 +5,7 @@ import com.krizaka.orazaka.jobs.domain.model.CapabilityDeclaration;
 import com.krizaka.orazaka.jobs.domain.model.CapabilityRoute;
 import com.krizaka.orazaka.jobs.domain.port.CapabilityRoutingClient;
 import com.krizaka.orazaka.jobservice.application.service.CapabilityRegistryService;
+import com.krizaka.orazaka.jobservice.application.service.InvalidCapabilityDeclarationException;
 import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -108,6 +109,18 @@ class CapabilityController {
   @ExceptionHandler(UnroutableCapabilityException.class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
   String unroutable(UnroutableCapabilityException failure) {
+    return failure.getMessage();
+  }
+
+  /**
+   * An invalid registration is the caller's to fix: 422 with the reason, never a 500.
+   *
+   * @param failure the refused declaration
+   * @return the message naming the capability and the accepted values
+   */
+  @ExceptionHandler(InvalidCapabilityDeclarationException.class)
+  @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+  String invalidDeclaration(InvalidCapabilityDeclarationException failure) {
     return failure.getMessage();
   }
 }
