@@ -2,7 +2,7 @@ package com.krizaka.orazaka.jobservice.infrastructure.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.krizaka.orazaka.core.infrastructure.config.CoreConfiguration;
+import com.krizaka.orazaka.adapter.springai.CoreInfrastructureAutoConfiguration;
 import com.krizaka.orazaka.core.infrastructure.config.CoreProperties;
 import com.krizaka.orazaka.test.config.ApplicationYaml;
 import java.util.Map;
@@ -19,7 +19,8 @@ import org.junit.jupiter.api.Test;
 class OrchestrationSwitchBindingTest {
 
   private static CoreProperties bound(Map<String, Object> overrides) {
-    return new CoreConfiguration().coreProperties(ApplicationYaml.ofThisService(overrides));
+    return new CoreInfrastructureAutoConfiguration()
+        .coreProperties(ApplicationYaml.ofThisService(overrides));
   }
 
   @Test
