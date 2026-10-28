@@ -2,7 +2,7 @@ package com.krizaka.orazaka.jobservice.infrastructure.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.krizaka.orazaka.core.infrastructure.config.CoreConfiguration;
+import com.krizaka.orazaka.adapter.springai.CoreInfrastructureAutoConfiguration;
 import com.krizaka.orazaka.core.infrastructure.config.CoreProperties;
 import com.krizaka.orazaka.test.config.ApplicationYaml;
 import java.util.Map;
@@ -17,9 +17,10 @@ import org.springframework.core.env.StandardEnvironment;
  * <p>Two causes kept it at 20, and they are tested apart because "two independent causes" is
  * exactly the shape where the visible one is fixed and victory is declared. Cause 1: a second
  * constructor on {@code ImageGenerationConfig}, so the binder built nothing. Cause 2: {@code
- * CoreConfiguration} never read the bound image config at all and built one from literals. The
- * first test fails on cause 1 only. The second fails on either — and after cause 1 alone was fixed
- * it was the only one still red, which is the evidence that the visible fix did not fix the bill.
+ * CoreInfrastructureAutoConfiguration} never read the bound image config at all and built one from
+ * literals. The first test fails on cause 1 only. The second fails on either — and after cause 1
+ * alone was fixed it was the only one still red, which is the evidence that the visible fix did not
+ * fix the bill.
  */
 class ImageStepsBindingTest {
 
@@ -45,17 +46,23 @@ class ImageStepsBindingTest {
       "[ADR-062 cause 2] the bean the meter reads carries IMAGE_GEN_STEPS=10, not a literal 20")
   void theMetersBeanCarriesTheDeploymentsSteps() {
     CoreProperties bean =
-        new CoreConfiguration().coreProperties(yaml(Map.of("IMAGE_GEN_STEPS", "10")));
+        new CoreInfrastructureAutoConfiguration()
+            .coreProperties(yaml(Map.of("IMAGE_GEN_STEPS", "10")));
 
     assertThat(bean.image().generation().steps())
-        .as("cause 2: CoreConfiguration built the image config from literals")
+        .as("cause 2: CoreInfrastructureAutoConfiguration built the image config from literals")
         .isEqualTo(10);
   }
 
   @Test
   @DisplayName("[ADR-062] unset, the yaml's default of 20 is what is billed")
   void unsetTheYamlDefaultApplies() {
-    assertThat(new CoreConfiguration().coreProperties(yaml(Map.of())).image().generation().steps())
+    assertThat(
+            new CoreInfrastructureAutoConfiguration()
+                .coreProperties(yaml(Map.of()))
+                .image()
+                .generation()
+                .steps())
         .isEqualTo(20);
   }
 }
