@@ -1104,6 +1104,22 @@ INSERT INTO research_source (source_key, kind, provider, base_url, allow_pattern
  '{www.donneesquebec.ca/recherche/dataset/c8433300-f752-4815-8ea2-69cad416dd80/**}', 604800, FALSE)
 ON CONFLICT (source_key) DO NOTHING;
 
+-- The grounded-research capability for Studios (ADR-087 §1, slice 5): a CAPABILITY step on the text lane, like
+-- orazaka.core.chat.completion. The model tokens of the answer are billed as CHAT / KILOTOKEN; each research
+-- operation (search, fetch, corpus read) is a RESEARCH hold priced by (RESEARCH, <provider key>, CALL) and counted
+-- in the run budget by the engine (ResearchMeter, ADR-088), so no new billable_capability exists here. The inputs
+-- are the ones orazaka-packs' document-validation sends (sources, jurisdiction, asOf, language, question, targets,
+-- document); the output contract is the citation shape of orazaka-studio CitationContract. Nothing calls it while
+-- law.lecture.enabled and research.enabled are false (both seeded off). The engine's executor for handler_key
+-- research.grounded is orazaka-ai-engine's to register; until then ExecutorCoherenceService reports it at startup.
+INSERT INTO orazaka_capabilities
+    (feature_key, handler_key, routing_key,
+     billable_unit, billable_capability, latency_class, input_schema, output_schema, is_enabled) VALUES
+('orazaka.core.research.grounded', 'research.grounded', 'job.text.process', 'KILOTOKEN', 'CHAT', 'INTERACTIVE',
+  $${"type": "object", "properties": {"sources": {"type": "array", "items": {"type": "string"}}, "jurisdiction": {"type": "string"}, "asOf": {"type": "string", "format": "date"}, "language": {"type": "string", "enum": ["fr", "en"]}, "question": {"type": "string", "format": "prose"}, "targets": {"type": "array"}, "document": {"type": "string"}}, "required": ["question"]}$$::jsonb,
+  $${"type": "object", "required": ["answer", "claims", "sources"], "properties": {"answer": {"type": "string"}, "claims": {"type": "array", "items": {"type": "object", "required": ["text", "status", "citations"], "properties": {"text": {"type": "string", "minLength": 1}, "status": {"type": "string", "enum": ["VERIFIED", "TO_VALIDATE"]}, "reason": {"type": "string"}, "citations": {"type": "array", "items": {"type": "object", "required": ["url", "quote", "contentHash", "fetchedAt"], "properties": {"url": {"type": "string", "minLength": 8}, "quote": {"type": "string", "minLength": 1, "maxLength": 300}, "contentHash": {"type": "string", "minLength": 64, "maxLength": 64}, "fetchedAt": {"type": "string"}}}}}}}, "sources": {"type": "array", "items": {"type": "object", "required": ["url", "title", "sourceKey"], "properties": {"url": {"type": "string"}, "title": {"type": "string"}, "sourceKey": {"type": "string"}}}}}}$$::jsonb, true)
+ON CONFLICT (feature_key) DO NOTHING;
+
 -- ============================================================================
 -- EXTERNAL CHECKS (orazaka-packs#138, orazaka-ai-engine#90) — court records, credit and identity as engine
 -- capabilities a blueprint step names by feature key. The engine's ExternalCheckService is the one door (consent,

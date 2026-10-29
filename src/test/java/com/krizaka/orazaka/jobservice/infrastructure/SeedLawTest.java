@@ -70,6 +70,28 @@ class SeedLawTest {
   }
 
   @Test
+  @DisplayName("the grounded-research capability is seeded, enabled, with the citation contract")
+  void theGroundedCapabilityIsSeeded() {
+    String row = LAW.substring(LAW.indexOf("('orazaka.core.research.grounded'"));
+    row = row.substring(0, row.indexOf("ON CONFLICT"));
+    assertThat(row)
+        .contains("'research.grounded', 'job.text.process', 'KILOTOKEN', 'CHAT', 'INTERACTIVE'")
+        .contains("\"required\": [\"answer\", \"claims\", \"sources\"]")
+        .contains("\"VERIFIED\", \"TO_VALIDATE\"")
+        .endsWith("true)\n");
+    // The pack's input names (orazaka-packs document-validation, the lecture).
+    assertThat(row)
+        .contains(
+            "\"sources\"",
+            "\"jurisdiction\"",
+            "\"asOf\"",
+            "\"language\"",
+            "\"question\"",
+            "\"targets\"",
+            "\"document\"");
+  }
+
+  @Test
   @DisplayName("the bounds are the ADR's, and the database enforces them")
   void theBoundsAreTheAdrs() {
     assertThat(LAW)
