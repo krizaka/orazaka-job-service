@@ -21,6 +21,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: krizaka/orazaka/.github/actions/copilot-workspace@main
+      - uses: krizaka/orazaka/.github/actions/copilot-workspace@566fdd8ce2d199ca5a89ff17cc0331a210c520d8 # main
         with:
           component: ${{ github.event.repository.name }}
