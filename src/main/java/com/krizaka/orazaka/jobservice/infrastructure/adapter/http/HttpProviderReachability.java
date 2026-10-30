@@ -67,6 +67,13 @@ class HttpProviderReachability implements ProviderReachability {
 
   private final ConcurrentHashMap<String, Loaded> loaded = new ConcurrentHashMap<>();
 
+  /**
+   * The only id stable-diffusion.cpp's sd-server ever lists, whatever model it was started with: it
+   * names nothing, so it is the same as an engine that lists nothing (orazaka#508: every model it
+   * served was reported "not running").
+   */
+  private static final String SD_SERVER_PLACEHOLDER_ID = "sd-cpp-local";
+
   private static final java.util.regex.Pattern MODEL_ID =
       java.util.regex.Pattern.compile("\"id\"\\s*:\\s*\"([^\"]+)\"");
 
@@ -104,6 +111,7 @@ class HttpProviderReachability implements ProviderReachability {
       while (matcher.find()) {
         ids.add(matcher.group(1).toLowerCase());
       }
+      ids.remove(SD_SERVER_PLACEHOLDER_ID);
       return ids.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(ids);
     } catch (java.io.IOException | IllegalArgumentException unreadable) {
       return java.util.Optional.empty();

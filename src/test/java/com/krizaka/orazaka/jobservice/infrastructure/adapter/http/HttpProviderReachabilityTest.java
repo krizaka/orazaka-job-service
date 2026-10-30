@@ -32,6 +32,16 @@ class HttpProviderReachabilityTest {
           exchange.getResponseBody().write(body);
           exchange.close();
         });
+    // stable-diffusion.cpp's sd-server names no model: it answers one placeholder id whatever it
+    // loaded (orazaka#508).
+    server.createContext(
+        "/sdcpp/v1/models",
+        exchange -> {
+          byte[] body = "{\"data\":[{\"id\":\"sd-cpp-local\",\"object\":\"model\"}]}".getBytes();
+          exchange.sendResponseHeaders(200, body.length);
+          exchange.getResponseBody().write(body);
+          exchange.close();
+        });
     server.start();
     reachability = new HttpProviderReachability(catalog);
   }
@@ -116,5 +126,16 @@ class HttpProviderReachabilityTest {
   @DisplayName("A provider that is down serves nothing")
   void downProviderServesNothing() {
     assertThat(reachability.serves("nobody", "x")).isFalse();
+  }
+
+  @Test
+  @DisplayName(
+      "An sd-server lists only its placeholder id: it names no model, so it is trusted to serve the one it was started with")
+  void sdServerPlaceholderIdDoesNotHideTheModel() {
+    when(catalog.getProviderBaseUrl("sdcpp"))
+        .thenReturn("http://127.0.0.1:" + server.getAddress().getPort() + "/sdcpp");
+
+    assertThat(reachability.serves("sdcpp", "flux-1-schnell")).isTrue();
+    assertThat(reachability.serves("sdcpp", "flux-2-klein-4b")).isTrue();
   }
 }
