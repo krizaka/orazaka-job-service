@@ -1,5 +1,6 @@
 package com.krizaka.orazaka.jobservice.infrastructure.adapter.amqp;
 
+import com.krizaka.orazaka.core.domain.model.image.ImageReference;
 import com.krizaka.orazaka.core.domain.model.image.ImageRequest;
 import com.krizaka.orazaka.core.domain.model.image.ImageResponse;
 import com.krizaka.orazaka.core.domain.model.image.ImageUsage;
@@ -13,6 +14,7 @@ import com.krizaka.orazaka.jobservice.catalog.ModelResolution;
 import com.krizaka.orazaka.jobservice.infrastructure.support.MediaFileStore;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
@@ -55,12 +57,18 @@ public final class ImageGenerationStrategy implements JobExecutor {
       throws JobExecutionException {
     String prompt = message.requirePrompt();
     ImageGenerationPayload requested;
+    ImageReferenceInputs referenceInputs;
+    List<ImageReference> references;
     try {
       // A seed is always chosen here, never left to the server: the job reports the seed it ran,
       // so any image can be made again — same prompt, size, model and seed, same picture.
       requested =
           ImageGenerationPayload.from(message.payload())
               .withSeedIfAbsent(ThreadLocalRandom.current().nextLong(MAX_SEED));
+      // The same character in every shot (krizaka-internal#158): pictures the image must follow,
+      // resolved among this actor's own files and refused by name when they are not.
+      referenceInputs = ImageReferenceInputs.from(message.payload());
+      references = referenceInputs.load(uploadDir, message.userId());
     } catch (IllegalArgumentException malformed) {
       throw new JobExecutionException(malformed.getMessage(), malformed);
     }
@@ -76,7 +84,8 @@ public final class ImageGenerationStrategy implements JobExecutor {
             model,
             Map.of(),
             ExecutionContextMapper.toEngineContext(context),
-            requested.direction());
+            requested.direction(),
+            references);
     long started = System.nanoTime();
     ImageResponse imageResponse = aiClient.image(imageRequest);
     long generationMs = (System.nanoTime() - started) / 1_000_000;
@@ -112,6 +121,14 @@ public final class ImageGenerationStrategy implements JobExecutor {
       result.put("modelNotice", resolution.notice());
     }
     result.put("seed", String.valueOf(requested.direction().seed()));
+    if (!references.isEmpty()) {
+      // The recipe names the pictures it followed, so the same shot can be made again.
+      result.put("references", referenceInputs.assetIds());
+      result.put("referenceWeight", referenceInputs.weight());
+    }
+    if (imageResponse.notice() != null) {
+      result.put("referenceNotice", imageResponse.notice());
+    }
     result.put("generationMs", generationMs);
 
     // The generation's parameters, reported as MEASUREMENTS — never as a unit or a price. The
