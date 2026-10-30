@@ -121,29 +121,32 @@ record ImageReferenceInputs(List<String> assetIds, double weight) {
     return references;
   }
 
+  private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 'P', 'N', 'G'};
+  private static final byte[] JPEG_SIGNATURE = {(byte) 0xFF, (byte) 0xD8};
+  private static final byte[] RIFF_SIGNATURE = {'R', 'I', 'F', 'F'};
+  private static final byte[] WEBP_SIGNATURE = {'W', 'E', 'B', 'P'};
+  private static final int RIFF_FORMAT_OFFSET = 8;
+  private static final int MIN_PNG_LENGTH = 8;
+  private static final int MIN_WEBP_LENGTH = 12;
+
   /** The type read from the file's first bytes — never from its name, which the user chose. */
   static String mediaType(byte[] bytes) {
-    if (bytes.length >= 8
-        && (bytes[0] & 0xFF) == 0x89
-        && bytes[1] == 'P'
-        && bytes[2] == 'N'
-        && bytes[3] == 'G') {
+    if (bytes.length >= MIN_PNG_LENGTH && startsWith(bytes, 0, PNG_SIGNATURE)) {
       return "image/png";
     }
-    if (bytes.length >= 3 && (bytes[0] & 0xFF) == 0xFF && (bytes[1] & 0xFF) == 0xD8) {
+    if (startsWith(bytes, 0, JPEG_SIGNATURE)) {
       return "image/jpeg";
     }
-    if (bytes.length >= 12
-        && bytes[0] == 'R'
-        && bytes[1] == 'I'
-        && bytes[2] == 'F'
-        && bytes[3] == 'F'
-        && bytes[8] == 'W'
-        && bytes[9] == 'E'
-        && bytes[10] == 'B'
-        && bytes[11] == 'P') {
+    if (bytes.length >= MIN_WEBP_LENGTH
+        && startsWith(bytes, 0, RIFF_SIGNATURE)
+        && startsWith(bytes, RIFF_FORMAT_OFFSET, WEBP_SIGNATURE)) {
       return "image/webp";
     }
     return "application/octet-stream";
+  }
+
+  private static boolean startsWith(byte[] bytes, int offset, byte[] signature) {
+    return bytes.length >= offset + signature.length
+        && Arrays.equals(bytes, offset, offset + signature.length, signature, 0, signature.length);
   }
 }
