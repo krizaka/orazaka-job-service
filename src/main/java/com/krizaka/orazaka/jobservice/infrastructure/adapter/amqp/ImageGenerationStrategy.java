@@ -52,6 +52,21 @@ public final class ImageGenerationStrategy implements JobExecutor {
     return "image.generate";
   }
 
+  /** The recipe names the pictures it followed, so the same shot can be made again. */
+  private static void recordReferences(
+      Map<String, Object> result,
+      ImageReferenceInputs inputs,
+      List<ImageReference> references,
+      String notice) {
+    if (!references.isEmpty()) {
+      result.put("references", inputs.assetIds());
+      result.put("referenceWeight", inputs.weight());
+    }
+    if (notice != null) {
+      result.put("referenceNotice", notice);
+    }
+  }
+
   @Override
   public JobExecutionResult execute(JobCommand message, JobExecutionContext context)
       throws JobExecutionException {
@@ -121,14 +136,7 @@ public final class ImageGenerationStrategy implements JobExecutor {
       result.put("modelNotice", resolution.notice());
     }
     result.put("seed", String.valueOf(requested.direction().seed()));
-    if (!references.isEmpty()) {
-      // The recipe names the pictures it followed, so the same shot can be made again.
-      result.put("references", referenceInputs.assetIds());
-      result.put("referenceWeight", referenceInputs.weight());
-    }
-    if (imageResponse.notice() != null) {
-      result.put("referenceNotice", imageResponse.notice());
-    }
+    recordReferences(result, referenceInputs, references, imageResponse.notice());
     result.put("generationMs", generationMs);
 
     // The generation's parameters, reported as MEASUREMENTS — never as a unit or a price. The
