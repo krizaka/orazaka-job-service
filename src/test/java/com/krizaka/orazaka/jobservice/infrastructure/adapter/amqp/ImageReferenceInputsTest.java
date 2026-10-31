@@ -65,7 +65,7 @@ class ImageReferenceInputsTest {
     var loaded =
         ImageReferenceInputs.from(Map.of("references", OWL)).load(uploads.toString(), "user-1");
     assertThat(loaded).hasSize(1);
-    assertThat(loaded.get(0).mediaType()).isEqualTo("image/png");
+    assertThat(loaded.getFirst().mediaType()).isEqualTo("image/png");
 
     assertThatThrownBy(
             () ->

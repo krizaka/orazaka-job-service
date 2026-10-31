@@ -262,7 +262,7 @@ class ImageGenerationStrategyTest {
     ArgumentCaptor<ImageRequest> sent = ArgumentCaptor.forClass(ImageRequest.class);
     org.mockito.Mockito.verify(aiClient).image(sent.capture());
     assertEquals(1, sent.getValue().references().size());
-    assertEquals(0.5, sent.getValue().references().get(0).weight());
+    assertEquals(0.5, sent.getValue().references().getFirst().weight());
     assertEquals(java.util.List.of(owl), result.get("references"));
     assertEquals(0.5, result.get("referenceWeight"));
     assertEquals("weights recorded, not applied", result.get("referenceNotice"));
