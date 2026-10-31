@@ -236,4 +236,54 @@ class ImageGenerationStrategyTest {
       throw new java.io.UncheckedIOException(e);
     }
   }
+
+  @Test
+  void execute_withReferences_sendsThePicturesAndRecordsThemInTheRecipe() throws Exception {
+    String owl = "11111111-1111-4111-8111-111111111111";
+    java.nio.file.Path mine = java.nio.file.Files.createDirectories(tempDir.resolve("user-1"));
+    java.nio.file.Files.write(
+        mine.resolve(owl + ".png"), new byte[] {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0});
+    when(aiClient.image(any(ImageRequest.class)))
+        .thenReturn(
+            new ImageResponse(
+                new byte[] {1, 2, 3, 4}, null, "png", null, "weights recorded, not applied"));
+    JobCommand message =
+        new JobCommand(
+            "job-7",
+            "user-1",
+            "image.generation",
+            "",
+            Map.of("prompt", "the same owl", "references", owl, "referenceWeight", "0.5"));
+    JobExecutionContext context =
+        new JobExecutionContext("u", "c", java.util.Map.of(), java.util.Set.of());
+
+    Map<String, Object> result = strategy.execute(message, context).output();
+
+    ArgumentCaptor<ImageRequest> sent = ArgumentCaptor.forClass(ImageRequest.class);
+    org.mockito.Mockito.verify(aiClient).image(sent.capture());
+    assertEquals(1, sent.getValue().references().size());
+    assertEquals(0.5, sent.getValue().references().getFirst().weight());
+    assertEquals(java.util.List.of(owl), result.get("references"));
+    assertEquals(0.5, result.get("referenceWeight"));
+    assertEquals("weights recorded, not applied", result.get("referenceNotice"));
+  }
+
+  @Test
+  void execute_withAReferenceThatIsNotTheActors_failsByName() {
+    JobCommand message =
+        new JobCommand(
+            "job-8",
+            "user-1",
+            "image.generation",
+            "",
+            Map.of("prompt", "an owl", "references", "33333333-3333-4333-8333-333333333333"));
+    JobExecutionContext context =
+        new JobExecutionContext("u", "c", java.util.Map.of(), java.util.Set.of());
+
+    var failure =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            com.krizaka.orazaka.jobs.domain.exception.JobExecutionException.class,
+            () -> strategy.execute(message, context));
+    assertTrue(failure.getMessage().contains("is not among your files"));
+  }
 }
