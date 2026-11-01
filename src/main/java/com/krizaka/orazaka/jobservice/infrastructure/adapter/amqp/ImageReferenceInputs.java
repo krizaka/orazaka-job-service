@@ -5,7 +5,7 @@ import com.krizaka.orazaka.core.domain.model.image.ImageRequest;
 import com.krizaka.orazaka.jobservice.infrastructure.support.AssetFileResolver;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -95,13 +95,24 @@ record ImageReferenceInputs(List<String> assetIds, double weight) {
   }
 
   /**
+   * How a stored file's bytes are read. Uploads and job outputs are sealed at rest (ADR-054), so
+   * the caller passes the store's decrypting reader: a raw read returns ciphertext, whose first
+   * bytes are no picture's (krizaka-internal#2090).
+   */
+  @FunctionalInterface
+  interface StoredBytes {
+    byte[] read(Path file) throws IOException;
+  }
+
+  /**
    * @param uploadDir the upload root
    * @param userId the acting user of this job
+   * @param storedBytes reads a stored file's plain bytes
    * @return the pictures, in order
    * @throws IllegalArgumentException when a reference is not one of the actor's files, or is not a
    *     still picture
    */
-  List<ImageReference> load(String uploadDir, String userId) {
+  List<ImageReference> load(String uploadDir, String userId, StoredBytes storedBytes) {
     List<ImageReference> references = new ArrayList<>();
     for (String id : assetIds) {
       File file =
@@ -112,7 +123,7 @@ record ImageReferenceInputs(List<String> assetIds, double weight) {
                           "the reference image " + id + " is not among your files"));
       byte[] bytes;
       try {
-        bytes = Files.readAllBytes(file.toPath());
+        bytes = storedBytes.read(file.toPath());
       } catch (IOException e) {
         throw new IllegalArgumentException("the reference image " + id + " cannot be read", e);
       }
