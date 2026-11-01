@@ -33,6 +33,9 @@ public final class ImageGenerationStrategy implements JobExecutor {
   /** stable-diffusion.cpp reads the seed as a signed 64-bit integer; stay in the safe range. */
   private static final long MAX_SEED = 1L << 32;
 
+  /** The one file an image job writes: what a later job reads back as a reference. */
+  private static final String IMAGE_FILE = "image.png";
+
   private final AiClient aiClient;
   private final ModelResolver modelResolver;
   private final MediaFileStore mediaFileStore;
@@ -96,7 +99,8 @@ public final class ImageGenerationStrategy implements JobExecutor {
           referenceInputs.load(
               uploadDir,
               message.userId(),
-              file -> encryptedAssetService.readAllBytes(file, acceptPlaintext));
+              file -> encryptedAssetService.readAllBytes(file, acceptPlaintext),
+              jobId -> mediaFileStore.read(uploadDir, message.userId(), jobId, IMAGE_FILE));
     } catch (IllegalArgumentException malformed) {
       throw new JobExecutionException(malformed.getMessage(), malformed);
     }
@@ -132,7 +136,7 @@ public final class ImageGenerationStrategy implements JobExecutor {
 
     if (imgData != null && imgData.length > 0) {
       translatedUrl =
-          mediaFileStore.save(uploadDir, message.userId(), message.jobId(), imgData, "image.png");
+          mediaFileStore.save(uploadDir, message.userId(), message.jobId(), imgData, IMAGE_FILE);
     } else if (translatedUrl.isEmpty() && imageResponse.url() != null) {
       translatedUrl = imageResponse.url();
     }

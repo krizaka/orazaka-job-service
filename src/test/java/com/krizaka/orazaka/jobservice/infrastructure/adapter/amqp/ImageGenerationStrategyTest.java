@@ -325,4 +325,81 @@ class ImageGenerationStrategyTest {
     assertEquals("image/png", reference.mediaType());
     org.junit.jupiter.api.Assertions.assertArrayEquals(png, reference.image());
   }
+
+  /**
+   * [krizaka-internal#2090] A redeploy wipes the disk, not the durable store: the output of an
+   * earlier job is brought back from it, as {@code MediaFileStore.read} does for a download. Read
+   * from the disk only, every reference failed as « not among your files » after a deploy.
+   */
+  @Test
+  void execute_withAReferenceGoneFromTheDiskAfterARedeploy_restoresItFromTheDurableStore()
+      throws Exception {
+    java.util.Map<String, byte[]> durable = new java.util.HashMap<>();
+    var bucket =
+        new com.krizaka.orazaka.assets.domain.port.DurableAssetStore() {
+          @Override
+          public boolean enabled() {
+            return true;
+          }
+
+          @Override
+          public void put(String key, java.nio.file.Path file) throws java.io.IOException {
+            durable.put(key, java.nio.file.Files.readAllBytes(file));
+          }
+
+          @Override
+          public boolean fetch(String key, java.nio.file.Path file) throws java.io.IOException {
+            byte[] bytes = durable.get(key);
+            if (bytes == null) {
+              return false;
+            }
+            java.nio.file.Files.createDirectories(file.getParent());
+            java.nio.file.Files.write(file, bytes);
+            return true;
+          }
+
+          @Override
+          public void delete(String key) {
+            durable.remove(key);
+          }
+        };
+    MediaFileStore durableStore =
+        new MediaFileStore(
+            assets,
+            bucket,
+            new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                "local", null, null, "storage.bunnycdn.com", null, "default"));
+    ImageGenerationStrategy afterDeploy =
+        new ImageGenerationStrategy(
+            aiClient,
+            modelResolver,
+            durableStore,
+            assets,
+            VisionAnalysisStrategyTest.testEncryption(),
+            tempDir.toString());
+    String earlierJob = "55555555-5555-4555-8555-555555555555";
+    byte[] png = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0, 0, 0, 13};
+    durableStore.save(tempDir.toString(), "user-1", earlierJob, png, "image.png");
+    // The redeploy: the container's disk is new.
+    org.springframework.util.FileSystemUtils.deleteRecursively(tempDir.resolve("user-1"));
+    when(aiClient.image(any(ImageRequest.class)))
+        .thenReturn(new ImageResponse(new byte[] {1, 2, 3, 4}, null, "png"));
+    JobCommand message =
+        new JobCommand(
+            "job-11",
+            "user-1",
+            "image.generation",
+            "",
+            Map.of("prompt", "the same owl, after the deploy", "references", earlierJob));
+    JobExecutionContext context =
+        new JobExecutionContext("u", "c", java.util.Map.of(), java.util.Set.of());
+
+    afterDeploy.execute(message, context);
+
+    ArgumentCaptor<ImageRequest> sent = ArgumentCaptor.forClass(ImageRequest.class);
+    org.mockito.Mockito.verify(aiClient).image(sent.capture());
+    var reference = sent.getValue().references().getFirst();
+    assertEquals("image/png", reference.mediaType());
+    org.junit.jupiter.api.Assertions.assertArrayEquals(png, reference.image());
+  }
 }
