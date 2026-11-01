@@ -64,14 +64,22 @@ class ImageReferenceInputsTest {
 
     var loaded =
         ImageReferenceInputs.from(Map.of("references", OWL))
-            .load(uploads.toString(), "user-1", Files::readAllBytes);
+            .load(
+                uploads.toString(),
+                "user-1",
+                Files::readAllBytes,
+                id -> java.util.Optional.empty());
     assertThat(loaded).hasSize(1);
     assertThat(loaded.getFirst().mediaType()).isEqualTo("image/png");
 
     assertThatThrownBy(
             () ->
                 ImageReferenceInputs.from(Map.of("references", DUCK))
-                    .load(uploads.toString(), "user-1", Files::readAllBytes))
+                    .load(
+                        uploads.toString(),
+                        "user-1",
+                        Files::readAllBytes,
+                        id -> java.util.Optional.empty()))
         .hasMessageContaining("is not among your files");
   }
 
@@ -84,7 +92,11 @@ class ImageReferenceInputsTest {
     assertThatThrownBy(
             () ->
                 ImageReferenceInputs.from(Map.of("references", OWL))
-                    .load(uploads.toString(), "user-1", Files::readAllBytes))
+                    .load(
+                        uploads.toString(),
+                        "user-1",
+                        Files::readAllBytes,
+                        id -> java.util.Optional.empty()))
         .hasMessageContaining("PNG, JPEG or WebP");
     assertThat(ImageReferenceInputs.mediaType(new byte[] {(byte) 0xFF, (byte) 0xD8, 0}))
         .isEqualTo("image/jpeg");
