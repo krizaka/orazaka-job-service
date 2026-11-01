@@ -1,5 +1,7 @@
 package com.krizaka.orazaka.jobservice.infrastructure.adapter.amqp;
 
+import com.krizaka.orazaka.assets.application.service.EncryptedAssetService;
+import com.krizaka.orazaka.assets.infrastructure.config.AssetEncryptionProperties;
 import com.krizaka.orazaka.core.domain.model.image.ImageReference;
 import com.krizaka.orazaka.core.domain.model.image.ImageRequest;
 import com.krizaka.orazaka.core.domain.model.image.ImageResponse;
@@ -34,16 +36,22 @@ public final class ImageGenerationStrategy implements JobExecutor {
   private final AiClient aiClient;
   private final ModelResolver modelResolver;
   private final MediaFileStore mediaFileStore;
+  private final EncryptedAssetService encryptedAssetService;
+  private final boolean acceptPlaintext;
   private final String uploadDir;
 
   public ImageGenerationStrategy(
       AiClient aiClient,
       ModelResolver modelResolver,
       MediaFileStore mediaFileStore,
+      EncryptedAssetService encryptedAssetService,
+      AssetEncryptionProperties encryption,
       @Value("${spring.servlet.multipart.location:var/orazaka-uploads}") String uploadDir) {
     this.aiClient = aiClient;
     this.modelResolver = modelResolver;
     this.mediaFileStore = mediaFileStore;
+    this.encryptedAssetService = encryptedAssetService;
+    this.acceptPlaintext = encryption.acceptPlaintext();
     this.uploadDir = uploadDir;
   }
 
@@ -83,7 +91,12 @@ public final class ImageGenerationStrategy implements JobExecutor {
       // The same character in every shot (krizaka-internal#158): pictures the image must follow,
       // resolved among this actor's own files and refused by name when they are not.
       referenceInputs = ImageReferenceInputs.from(message.payload());
-      references = referenceInputs.load(uploadDir, message.userId());
+      // Through the store: a reference is sealed at rest like every input (krizaka-internal#2090).
+      references =
+          referenceInputs.load(
+              uploadDir,
+              message.userId(),
+              file -> encryptedAssetService.readAllBytes(file, acceptPlaintext));
     } catch (IllegalArgumentException malformed) {
       throw new JobExecutionException(malformed.getMessage(), malformed);
     }
