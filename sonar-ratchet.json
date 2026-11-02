@@ -1,0 +1,13 @@
+{
+  "project": "krizaka_orazaka-job-service",
+  "counts": {
+    "bugs": 0,
+    "vulnerabilities": 0,
+    "hotspots": 0,
+    "smells_blocker": 0,
+    "smells_critical": 8,
+    "smells_major": 2,
+    "smells_minor": 0,
+    "smells_info": 0
+  }
+}

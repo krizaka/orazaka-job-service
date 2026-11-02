@@ -5,12 +5,13 @@ import com.krizaka.orazaka.core.domain.model.image.ImageRequest;
 import com.krizaka.orazaka.jobservice.infrastructure.support.AssetFileResolver;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -95,26 +96,53 @@ record ImageReferenceInputs(List<String> assetIds, double weight) {
   }
 
   /**
+   * How a stored file's bytes are read. Uploads and job outputs are sealed at rest (ADR-054), so
+   * the caller passes the store's decrypting reader: a raw read returns ciphertext, whose first
+   * bytes are no picture's (krizaka-internal#2090).
+   */
+  @FunctionalInterface
+  interface StoredBytes {
+    byte[] read(Path file) throws IOException;
+  }
+
+  /**
+   * The plain bytes of one of the actor's earlier outputs, brought back from the durable store when
+   * the disk no longer holds it: a redeploy wipes the disk, not the store (krizaka-internal#2090).
+   */
+  @FunctionalInterface
+  interface DurableOutput {
+    Optional<byte[]> read(String jobId);
+  }
+
+  /**
    * @param uploadDir the upload root
    * @param userId the acting user of this job
+   * @param storedBytes reads a stored file's plain bytes
+   * @param durableOutput reads an earlier output of this actor that is no longer on the disk
    * @return the pictures, in order
    * @throws IllegalArgumentException when a reference is not one of the actor's files, or is not a
    *     still picture
    */
-  List<ImageReference> load(String uploadDir, String userId) {
+  List<ImageReference> load(
+      String uploadDir, String userId, StoredBytes storedBytes, DurableOutput durableOutput) {
     List<ImageReference> references = new ArrayList<>();
     for (String id : assetIds) {
-      File file =
-          AssetFileResolver.resolveOutput(uploadDir, userId, id)
-              .orElseThrow(
-                  () ->
-                      new IllegalArgumentException(
-                          "the reference image " + id + " is not among your files"));
+      Optional<File> file = AssetFileResolver.resolveOutput(uploadDir, userId, id);
       byte[] bytes;
-      try {
-        bytes = Files.readAllBytes(file.toPath());
-      } catch (IOException e) {
-        throw new IllegalArgumentException("the reference image " + id + " cannot be read", e);
+      if (file.isPresent()) {
+        try {
+          bytes = storedBytes.read(file.get().toPath());
+        } catch (IOException e) {
+          throw new IllegalArgumentException("the reference image " + id + " cannot be read", e);
+        }
+      } else {
+        bytes =
+            durableOutput
+                .read(id)
+                .orElseThrow(
+                    () ->
+                        new IllegalArgumentException(
+                            "the reference image " + id + " is not among your files"));
       }
       references.add(new ImageReference(bytes, mediaType(bytes), weight));
     }

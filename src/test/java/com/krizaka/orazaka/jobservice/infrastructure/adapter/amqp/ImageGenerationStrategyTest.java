@@ -30,18 +30,25 @@ class ImageGenerationStrategyTest {
   @Mock private ModelResolver modelResolver;
 
   private ImageGenerationStrategy strategy;
+  private MediaFileStore store;
+  private com.krizaka.orazaka.assets.application.service.EncryptedAssetService assets;
 
   @BeforeEach
   void setUp() throws Exception {
+    assets = testAssets();
+    store =
+        new MediaFileStore(
+            assets,
+            new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
+            new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                "local", null, null, "storage.bunnycdn.com", null, "default"));
     strategy =
         new ImageGenerationStrategy(
             aiClient,
             modelResolver,
-            new MediaFileStore(
-                testAssets(),
-                new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
-                new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
-                    "local", null, null, "storage.bunnycdn.com", null, "default")),
+            store,
+            assets,
+            VisionAnalysisStrategyTest.testEncryption(),
             tempDir.toString());
     lenient()
         .when(modelResolver.resolution(any(), eq("image"), any()))
@@ -241,7 +248,8 @@ class ImageGenerationStrategyTest {
   void execute_withReferences_sendsThePicturesAndRecordsThemInTheRecipe() throws Exception {
     String owl = "11111111-1111-4111-8111-111111111111";
     java.nio.file.Path mine = java.nio.file.Files.createDirectories(tempDir.resolve("user-1"));
-    java.nio.file.Files.write(
+    // An upload is sealed at rest like every stored file (ADR-054).
+    assets.write(
         mine.resolve(owl + ".png"), new byte[] {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0});
     when(aiClient.image(any(ImageRequest.class)))
         .thenReturn(
@@ -285,5 +293,113 @@ class ImageGenerationStrategyTest {
             com.krizaka.orazaka.jobs.domain.exception.JobExecutionException.class,
             () -> strategy.execute(message, context));
     assertTrue(failure.getMessage().contains("is not among your files"));
+  }
+
+  /**
+   * [krizaka-internal#2090] The output of an earlier image job is sealed at rest (ADR-054): read
+   * raw, its first bytes are ciphertext and the reference was refused as {@code
+   * application/octet-stream}. It is read through the store, so its own PNG bytes reach the model.
+   */
+  @Test
+  void execute_withTheOutputOfAnEarlierJobAsReference_sendsItsDecryptedPicture() throws Exception {
+    String earlierJob = "44444444-4444-4444-8444-444444444444";
+    byte[] png = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0, 0, 0, 13};
+    store.save(tempDir.toString(), "user-1", earlierJob, png, "image.png");
+    when(aiClient.image(any(ImageRequest.class)))
+        .thenReturn(new ImageResponse(new byte[] {1, 2, 3, 4}, null, "png"));
+    JobCommand message =
+        new JobCommand(
+            "job-10",
+            "user-1",
+            "image.generation",
+            "",
+            Map.of("prompt", "the same owl, at the window", "references", earlierJob));
+    JobExecutionContext context =
+        new JobExecutionContext("u", "c", java.util.Map.of(), java.util.Set.of());
+
+    strategy.execute(message, context);
+
+    ArgumentCaptor<ImageRequest> sent = ArgumentCaptor.forClass(ImageRequest.class);
+    org.mockito.Mockito.verify(aiClient).image(sent.capture());
+    var reference = sent.getValue().references().getFirst();
+    assertEquals("image/png", reference.mediaType());
+    org.junit.jupiter.api.Assertions.assertArrayEquals(png, reference.image());
+  }
+
+  /**
+   * [krizaka-internal#2090] A redeploy wipes the disk, not the durable store: the output of an
+   * earlier job is brought back from it, as {@code MediaFileStore.read} does for a download. Read
+   * from the disk only, every reference failed as « not among your files » after a deploy.
+   */
+  @Test
+  void execute_withAReferenceGoneFromTheDiskAfterARedeploy_restoresItFromTheDurableStore()
+      throws Exception {
+    java.util.Map<String, byte[]> durable = new java.util.HashMap<>();
+    var bucket =
+        new com.krizaka.orazaka.assets.domain.port.DurableAssetStore() {
+          @Override
+          public boolean enabled() {
+            return true;
+          }
+
+          @Override
+          public void put(String key, java.nio.file.Path file) throws java.io.IOException {
+            durable.put(key, java.nio.file.Files.readAllBytes(file));
+          }
+
+          @Override
+          public boolean fetch(String key, java.nio.file.Path file) throws java.io.IOException {
+            byte[] bytes = durable.get(key);
+            if (bytes == null) {
+              return false;
+            }
+            java.nio.file.Files.createDirectories(file.getParent());
+            java.nio.file.Files.write(file, bytes);
+            return true;
+          }
+
+          @Override
+          public void delete(String key) {
+            durable.remove(key);
+          }
+        };
+    MediaFileStore durableStore =
+        new MediaFileStore(
+            assets,
+            bucket,
+            new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                "local", null, null, "storage.bunnycdn.com", null, "default"));
+    ImageGenerationStrategy afterDeploy =
+        new ImageGenerationStrategy(
+            aiClient,
+            modelResolver,
+            durableStore,
+            assets,
+            VisionAnalysisStrategyTest.testEncryption(),
+            tempDir.toString());
+    String earlierJob = "55555555-5555-4555-8555-555555555555";
+    byte[] png = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0, 0, 0, 13};
+    durableStore.save(tempDir.toString(), "user-1", earlierJob, png, "image.png");
+    // The redeploy: the container's disk is new.
+    org.springframework.util.FileSystemUtils.deleteRecursively(tempDir.resolve("user-1"));
+    when(aiClient.image(any(ImageRequest.class)))
+        .thenReturn(new ImageResponse(new byte[] {1, 2, 3, 4}, null, "png"));
+    JobCommand message =
+        new JobCommand(
+            "job-11",
+            "user-1",
+            "image.generation",
+            "",
+            Map.of("prompt", "the same owl, after the deploy", "references", earlierJob));
+    JobExecutionContext context =
+        new JobExecutionContext("u", "c", java.util.Map.of(), java.util.Set.of());
+
+    afterDeploy.execute(message, context);
+
+    ArgumentCaptor<ImageRequest> sent = ArgumentCaptor.forClass(ImageRequest.class);
+    org.mockito.Mockito.verify(aiClient).image(sent.capture());
+    var reference = sent.getValue().references().getFirst();
+    assertEquals("image/png", reference.mediaType());
+    org.junit.jupiter.api.Assertions.assertArrayEquals(png, reference.image());
   }
 }
