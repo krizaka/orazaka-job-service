@@ -1312,4 +1312,4 @@ UPDATE orazaka_models SET vendor = 'Black Forest Labs', family = 'FLUX.1 schnell
 -- touched (image rows carry no other options). Idempotent.
 
 UPDATE orazaka_models SET options = '{"maxReferences":4}'
-WHERE model_name = 'flux-2-klein-4b' AND (options IS NULL OR options = '');
+WHERE model_name = 'flux-2-klein-4b' AND NULLIF(options, '') IS NULL;
