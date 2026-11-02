@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
  */
 class ExecutorRegistryFitnessTest {
 
-  private static final Path SEED = Path.of("infra/initdb/30-jobs-config.sql");
+  private static final Path SEED = Path.of("src/main/resources/db/migration/V1__job_baseline.sql");
   private static final Path WORKER = Path.of("src/main/resources/worker.yaml");
   private static final Path SOURCES = Path.of("src/main/java");
 

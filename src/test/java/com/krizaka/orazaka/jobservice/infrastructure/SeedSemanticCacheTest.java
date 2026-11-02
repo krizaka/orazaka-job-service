@@ -18,7 +18,7 @@ class SeedSemanticCacheTest {
 
   private static String read() {
     try {
-      return Files.readString(Path.of("infra/initdb/30-jobs-config.sql"));
+      return Files.readString(Path.of("src/main/resources/db/migration/V1__job_baseline.sql"));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
@@ -37,6 +37,7 @@ class SeedSemanticCacheTest {
     table = table.substring(0, table.indexOf(");"));
     assertThat(table)
         .contains("tenant_id", "scope_guard_hash", "model_tier", "expires_at", "vector(1024)");
-    assertThat(SEED).contains("CREATE EXTENSION IF NOT EXISTS vector;");
+    // The extension is created by the database bootstrap; the baseline only asserts it is there.
+    assertThat(SEED).contains("extname = 'vector'").doesNotContain("CREATE EXTENSION");
   }
 }

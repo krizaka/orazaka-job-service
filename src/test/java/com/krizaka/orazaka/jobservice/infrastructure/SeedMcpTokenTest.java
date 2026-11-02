@@ -16,7 +16,7 @@ class SeedMcpTokenTest {
   @Test
   @DisplayName("both MCP token columns hold a sealed envelope of any length")
   void tokenColumnsAreText() throws Exception {
-    String seed = Files.readString(Path.of("infra/initdb/30-jobs-config.sql"));
+    String seed = Files.readString(Path.of("src/main/resources/db/migration/V1__job_baseline.sql"));
     for (String table : new String[] {"user_mcp_servers", "platform_mcp_servers"}) {
       String body = seed.substring(seed.indexOf("CREATE TABLE " + table + " ("));
       body = body.substring(0, body.indexOf(");"));
