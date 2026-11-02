@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.krizaka.orazaka.test.AbstractContainerIntegrationTest;
-import com.krizaka.orazaka.test.architecture.SqlBoundaryRules;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,7 +28,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 /**
- * The law-corpus block of the <b>real</b> {@code infra/initdb/30-jobs-config.sql} on PostgreSQL
+ * The law-corpus block of the <b>real</b> {@code db/migration/V1__job_baseline.sql} on PostgreSQL
  * (ADR-089 §2 and §10, orazaka-job-service#67). The database is the one of {@link
  * AbstractContainerIntegrationTest}, the single source of the containers.
  *
@@ -78,8 +77,9 @@ class LawSchemaIT extends AbstractContainerIntegrationTest {
   static void readInitDb() throws IOException {
     String initDb =
         Files.readString(
-            SqlBoundaryRules.locateInitDb(Path.of(System.getProperty("user.dir")))
-                .resolve("30-jobs-config.sql"));
+            Path.of(
+                System.getProperty("user.dir"),
+                "src/main/resources/db/migration/V1__job_baseline.sql"));
     lawBlock = only(LAW_BLOCK, initDb, "the law block");
     researchBlock = only(RESEARCH_BLOCK, initDb, "the research block");
     runtimeConfigDdl = only(RUNTIME_CONFIG_DDL, initDb, "the runtime-config table");
@@ -88,7 +88,7 @@ class LawSchemaIT extends AbstractContainerIntegrationTest {
   private static String only(Pattern pattern, String text, String what) {
     Matcher found = pattern.matcher(text);
     // One match, or the pattern stopped reading the file and this suite would prove nothing.
-    assertThat(found.find()).as(what + " is in the initdb").isTrue();
+    assertThat(found.find()).as(what + " is in the V1 baseline").isTrue();
     String match = found.group();
     assertThat(found.find()).as(what + " appears once").isFalse();
     return match;

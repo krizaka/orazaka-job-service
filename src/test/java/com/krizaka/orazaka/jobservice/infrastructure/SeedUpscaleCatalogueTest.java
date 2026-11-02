@@ -8,10 +8,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * The seed of the catalogue (infra/initdb/30-jobs-config.sql) names the optional video upscale: the
- * video capability takes an {@code upscale} input (none by default), and SeedVR2 3B is a model row
- * — Apache-2.0, commercial use allowed, its price said in its description from the measured runs.
- * Read as text: the database itself is the ITs' business.
+ * The seed of the catalogue (db/migration/V1__job_baseline.sql) names the optional video upscale:
+ * the video capability takes an {@code upscale} input (none by default), and SeedVR2 3B is a model
+ * row — Apache-2.0, commercial use allowed, its price said in its description from the measured
+ * runs. Read as text: the database itself is the ITs' business.
  */
 class SeedUpscaleCatalogueTest {
 
@@ -19,7 +19,7 @@ class SeedUpscaleCatalogueTest {
 
   private static String read() {
     try {
-      return Files.readString(Path.of("infra/initdb/30-jobs-config.sql"));
+      return Files.readString(Path.of("src/main/resources/db/migration/V1__job_baseline.sql"));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }

@@ -10,7 +10,6 @@ import com.krizaka.orazaka.core.domain.model.checks.CheckRefusal;
 import com.krizaka.orazaka.core.domain.model.checks.KeySource;
 import com.krizaka.orazaka.jobservice.infrastructure.adapter.persistence.ExternalCheckAuditStore;
 import com.krizaka.orazaka.test.AbstractContainerIntegrationTest;
-import com.krizaka.orazaka.test.architecture.SqlBoundaryRules;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +35,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 /**
- * The external-checks block of the <b>real</b> {@code infra/initdb/30-jobs-config.sql} on
+ * The external-checks block of the <b>real</b> {@code db/migration/V1__job_baseline.sql} on
  * PostgreSQL (orazaka-packs#138), and the audit store over the table it creates. The database is
  * the one of {@link AbstractContainerIntegrationTest}, in a schema of its own.
  *
@@ -81,8 +80,9 @@ class ExternalCheckSchemaIT extends AbstractContainerIntegrationTest {
   static void readInitDb() throws IOException {
     String initDb =
         Files.readString(
-            SqlBoundaryRules.locateInitDb(Path.of(System.getProperty("user.dir")))
-                .resolve("30-jobs-config.sql"));
+            Path.of(
+                System.getProperty("user.dir"),
+                "src/main/resources/db/migration/V1__job_baseline.sql"));
     block = only(BLOCK, initDb, "the external-checks block");
     capabilitiesDdl = only(CAPABILITIES_DDL, initDb, "the capability registry");
   }
@@ -90,7 +90,7 @@ class ExternalCheckSchemaIT extends AbstractContainerIntegrationTest {
   private static String only(Pattern pattern, String text, String what) {
     Matcher found = pattern.matcher(text);
     // One match, or the pattern stopped reading the file and this suite would prove nothing.
-    assertThat(found.find()).as(what + " is in the initdb").isTrue();
+    assertThat(found.find()).as(what + " is in the V1 baseline").isTrue();
     String match = found.group();
     assertThat(found.find()).as(what + " appears once").isFalse();
     return match;

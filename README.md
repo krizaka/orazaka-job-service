@@ -31,7 +31,7 @@ part of the [Orazaka platform](https://github.com/krizaka/orazaka) by [Krizaka](
 
 The asynchronous executor (port `8090`): drains `orazaka.jobs.interactive` and `orazaka.jobs.batch`,
 owns the capability registry (`/internal/v1/capabilities`) and worker registry
-(`/internal/v1/workers`). Owns `infra/initdb/30-jobs-config.sql` (jobs, outbox, dedup, config plane,
+(`/internal/v1/workers`). Owns its schema, `src/main/resources/db/migration/V1__job_baseline.sql`, applied by Flyway at startup (history table `flyway_history_job`; `infra/initdb/30-jobs-config.sql` only creates the pgvector extension locally) (jobs, outbox, dedup, config plane,
 capability seed, and the grounded-research tables of ADR-087 — sources, the document cache keyed by source,
 URL and content hash, the fetch audit, consents — with research off and every source disabled by default; and the law corpus of ADR-089 — instruments, dated and
 hashed article versions, imports, the retrieval cache, rule proposals, the demand for unsupported kinds — with the

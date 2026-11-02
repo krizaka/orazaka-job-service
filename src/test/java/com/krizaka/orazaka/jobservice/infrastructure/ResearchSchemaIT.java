@@ -3,7 +3,6 @@ package com.krizaka.orazaka.jobservice.infrastructure;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.krizaka.orazaka.test.architecture.SqlBoundaryRules;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -25,7 +24,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * The grounded-research block of the <b>real</b> {@code infra/initdb/30-jobs-config.sql} on
+ * The grounded-research block of the <b>real</b> {@code db/migration/V1__job_baseline.sql} on
  * PostgreSQL (ADR-087 slice 1, orazaka-job-service#62): it applies on an empty database with its
  * one prerequisite ({@code orazaka_runtime_config}), it applies a second time without touching what
  * an administrator changed in between, every source is seeded disabled, and the constraints the
@@ -81,8 +80,9 @@ class ResearchSchemaIT {
   private static String readInitDb() {
     try {
       return Files.readString(
-          SqlBoundaryRules.locateInitDb(Path.of(System.getProperty("user.dir")))
-              .resolve("30-jobs-config.sql"));
+          Path.of(
+              System.getProperty("user.dir"),
+              "src/main/resources/db/migration/V1__job_baseline.sql"));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -91,7 +91,7 @@ class ResearchSchemaIT {
   private static String only(Pattern pattern, String text, String what) {
     Matcher found = pattern.matcher(text);
     // One match, or the pattern stopped reading the file and this suite would prove nothing.
-    assertThat(found.find()).as(what + " is in the initdb").isTrue();
+    assertThat(found.find()).as(what + " is in the V1 baseline").isTrue();
     String match = found.group();
     assertThat(found.find()).as(what + " appears once").isFalse();
     return match;

@@ -21,7 +21,6 @@ import com.krizaka.orazaka.jobservice.infrastructure.config.JobsProperties;
 import com.krizaka.orazaka.persistence.domain.model.JobDto;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.CapabilityManager;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
-import com.krizaka.orazaka.test.architecture.SqlBoundaryRules;
 import com.krizaka.users.domain.model.User;
 import com.krizaka.users.domain.port.UserDirectoryClient;
 import java.io.IOException;
@@ -55,7 +54,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * A protected job leaves nothing behind in the job plane once it is terminal (ADR-065, audit #27).
  *
- * <p>Against the <b>real</b> {@code infra/initdb/30-jobs-config.sql}, and through the real {@link
+ * <p>Against the <b>real</b> {@code db/migration/V1__job_baseline.sql}, and through the real {@link
  * JobListener} writing real encrypted files at the real layout: the claim is about what the
  * executor keeps, so the executor has to be what kept it. Only the model call is stubbed, and the
  * job row is written by a JDBC twin of the port over the real table — the constraint under test is
@@ -79,7 +78,7 @@ class ProtectedJobRetentionIT {
           .withPassword("postgres");
 
   /**
-   * The job plane's own statements, read out of the real initdb file: the job table, its indexes
+   * The job plane's own statements, read out of the real V1 baseline: the job table, its indexes
    * and the purge tombstones — exactly what this suite makes claims about.
    *
    * <p>Not the whole file, and the reason is a finding rather than a preference: {@code
@@ -126,8 +125,9 @@ class ProtectedJobRetentionIT {
     try {
       initDb =
           Files.readString(
-              SqlBoundaryRules.locateInitDb(Path.of(System.getProperty("user.dir")))
-                  .resolve("30-jobs-config.sql"));
+              Path.of(
+                  System.getProperty("user.dir"),
+                  "src/main/resources/db/migration/V1__job_baseline.sql"));
     } catch (IOException e) {
       throw new java.io.UncheckedIOException(e);
     }
@@ -139,7 +139,7 @@ class ProtectedJobRetentionIT {
     }
     // Two tables and two indexes. Fewer means the pattern stopped matching the file and this
     // suite would be running against whatever it did not create.
-    assertThat(executed).as("job-plane statements read from the initdb file").isEqualTo(4);
+    assertThat(executed).as("job-plane statements read from the V1 baseline").isEqualTo(4);
   }
 
   @AfterAll

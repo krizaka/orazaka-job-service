@@ -180,6 +180,15 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
 
+        <!-- Flyway: the schema (db/migration) is applied at startup (krizaka-internal#2255) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

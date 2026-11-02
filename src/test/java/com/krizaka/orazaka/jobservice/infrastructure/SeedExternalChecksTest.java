@@ -49,7 +49,7 @@ class SeedExternalChecksTest {
 
   private static String read() {
     try {
-      return Files.readString(Path.of("infra/initdb/30-jobs-config.sql"));
+      return Files.readString(Path.of("src/main/resources/db/migration/V1__job_baseline.sql"));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }

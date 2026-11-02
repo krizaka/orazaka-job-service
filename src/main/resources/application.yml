@@ -29,7 +29,25 @@ spring:
     init:
       mode: never
   flyway:
-    enabled: false
+    # The schema is db/migration (V1 = the baseline), applied at startup as the owner role, never by hand (krizaka-internal#2255).
+    # The migrator connection is distinct from the runtime datasource; locally it falls back to the datasource values.
+    enabled: true
+    locations: classpath:db/migration
+    url: ${DATABASE_JOB_MIGRATOR_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/orazaka_db}}
+    user: ${DATABASE_JOB_MIGRATOR_USER:${SPRING_DATASOURCE_USERNAME:orazaka_app}}
+    password: ${DATABASE_JOB_MIGRATOR_PASSWORD:${SPRING_DATASOURCE_PASSWORD:orazaka_pass}}
+    # orazaka_db is shared by three contexts (conversation, job, governance), one history table each.
+    table: flyway_history_job
+    # baseline-on-migrate adopts a non-empty database without history; it stays only until the first reset (then false).
+    baseline-on-migrate: true
+    # Trap: on a fresh orazaka_db where another context already created its tables, baselining at the default 1 would
+    # mark V1 applied and SKIP it. Baselining at 0 makes V1 always run (covered by the migrations IT of the conversation service).
+    baseline-version: "0"
+    validate-on-migrate: true
+    clean-disabled: true
+    out-of-order: false
+    # V1 holds JSON Schemas with literal ${...} text; Flyway must not read them as placeholders.
+    placeholder-replacement: false
 
   servlet:
     multipart:
