@@ -14,6 +14,6 @@ permissions: {}
 jobs:
   security:
     name: Security scan
-    uses: krizaka/.github/.github/workflows/security-scan.yml@33659828113f147459416d4ae30eab8457bf1957 # main
+    uses: krizaka/.github/.github/workflows/security-scan.yml@ad452c800f763d4f49a2cf36ffe32882ce1230bd # main
     permissions:
       contents: read
