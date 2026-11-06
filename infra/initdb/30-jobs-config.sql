@@ -1,5 +1,5 @@
 -- ============================================================================
--- ORAZAKA — Local DB bootstrap · 30 — JOB ORCHESTRATION + CONFIG PLANE
+-- SOVKORA — Local DB bootstrap · 30 — JOB ORCHESTRATION + CONFIG PLANE
 -- ----------------------------------------------------------------------------
 -- The schema is NOT here any more (krizaka-internal#2255): the service creates it at startup with Flyway
 -- (src/main/resources/db/migration/V1__job_baseline.sql, history table flyway_history_job).
