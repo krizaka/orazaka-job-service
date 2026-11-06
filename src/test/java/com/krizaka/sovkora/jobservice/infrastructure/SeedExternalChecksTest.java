@@ -22,8 +22,8 @@ import tools.jackson.databind.json.JsonMapper;
  * The three external checks are seeded enabled, routed by {@code handler_key} to the executor that
  * serves them, billed per {@code CALL} as {@code EXTERNAL_CHECK}, with the step contract of {@code
  * sovkora-packs}' {@code tests/contracts/sovkora-core-checks.json} (sovkora-packs#138). Read as
- * text, like sovkora-studio-service's {@code BlueprintFitnessTest} reads it; {@code ExternalCheckSchemaIT}
- * applies the block on PostgreSQL.
+ * text, like sovkora-studio-service's {@code BlueprintFitnessTest} reads it; {@code
+ * ExternalCheckSchemaIT} applies the block on PostgreSQL.
  */
 class SeedExternalChecksTest {
 
