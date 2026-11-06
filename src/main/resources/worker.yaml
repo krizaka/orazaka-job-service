@@ -19,7 +19,7 @@
 # (job.video.generate and job.compose.assemble reach the Python worker; job.media.generate reaches
 # this one), and this process serves two families at once. `bindings` is the exact answer and is
 # what the coherence check reads. See ADR-038.
-name: orazaka-job-service
+name: sovkora-job-service
 family: core
 bindings:
   - "job.media.generate"

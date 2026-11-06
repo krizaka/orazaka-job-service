@@ -1,5 +1,5 @@
 # ==============================================================================
-# Orazaka Job Orchestration Service — application configuration
+# Sovkora Job Orchestration Service — application configuration
 # ------------------------------------------------------------------------------
 # Async COMMAND executor: consumes the two lanes orazaka.jobs.interactive/batch, runs the cognitive
 # pipeline in-process, writes orazaka_jobs, emits job.{id}.done|error. No HTTP
@@ -12,7 +12,7 @@ server:
 
 spring:
   application:
-    name: orazaka-job-service
+    name: sovkora-job-service
   threads:
     virtual:
       enabled: true
@@ -52,7 +52,7 @@ spring:
   servlet:
     multipart:
       # Executor writes generated media under the shared upload root the router serves.
-      location: ${UPLOAD_DIR:var/orazaka-uploads}
+      location: ${UPLOAD_DIR:var/sovkora-uploads}
 
   rabbitmq:
     host: ${RABBITMQ_HOST:${SPRING_RABBITMQ_HOST:localhost}}
@@ -106,10 +106,10 @@ logging:
       total-size-cap: 10MB
       max-history: 7
   level:
-    com.krizaka.orazaka: ${LOGGING_LEVEL_ORAZAKA:DEBUG}
+    com.krizaka.sovkora: ${LOGGING_LEVEL_ORAZAKA:DEBUG}
     org.springframework.amqp: INFO
 
-# ── Orazaka — organised by module ─────────────────────────────────────────────
+# ── Sovkora — organised by module ─────────────────────────────────────────────
 orazaka:
   # Asset encryption (ADR-054). The master key is NOT in .env: it is the one secret whose
   # compromise is total, and .env is the file that gets pasted, copied and mounted wholesale.
@@ -117,14 +117,14 @@ orazaka:
   assets:
     encryption:
       enabled: ${ASSETS_ENCRYPTION_ENABLED:true}
-      master-key-file: ${ASSETS_MASTER_KEY_FILE:${user.home}/.orazaka/master.key}
+      master-key-file: ${ASSETS_MASTER_KEY_FILE:${user.home}/.sovkora/master.key}
       block-size: ${ASSETS_BLOCK_SIZE:65536}
       accept-plaintext: ${ASSETS_ACCEPT_PLAINTEXT:false}
   # Async job execution lifecycle (job-level timeout).
   jobs:
     execution-timeout: ${JOBS_TIMEOUT_SECONDS:1800}
 
-  # orazaka-messaging (RabbitMQ broker wiring) — the executor declares the same
+  # sovkora-messaging (RabbitMQ broker wiring) — the executor declares the same
   # orazaka.jobs topology (JobsTopologyConfig) the conversation service publishes to,
   # so the bounded work-queue arguments must match on both hosts.
   messaging:
@@ -151,7 +151,7 @@ orazaka:
     knowledge:
       base-url: ${KNOWLEDGE_URL:http://localhost:8084}
       # Mints the SERVICE token /internal/v1/knowledge now requires (ADR-035).
-      service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+      service-secret: ${IDENTITY_JWT_SECRET:sovkora-local-dev-identity-jwt-secret-256bit!}
     orchestration:
       enabled: ${ORCHESTRATION_ENABLED:true}
 
@@ -166,7 +166,7 @@ krizaka:
     # Mints the SERVICE token /internal/v1/billing requires (ADR-035). It was absent from
     # every consumer, so BILLING_ENABLED=true crashed each of them at startup with "the
     # shared identity secret is required" — billing had never been switched on anywhere.
-    service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+    service-secret: ${IDENTITY_JWT_SECRET:sovkora-local-dev-identity-jwt-secret-256bit!}
     connect-timeout: ${BILLING_CONNECT_TIMEOUT:500ms}
     read-timeout: ${BILLING_READ_TIMEOUT:2s}
   users:
@@ -174,11 +174,11 @@ krizaka:
       # The users service's internal API (krizaka-users-client): who the acting user is, their
       # profile, provider keys and rate-limit tier. Every call carries a SERVICE token.
       base-url: ${IDENTITY_URL:http://localhost:8083}
-      service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
-      service-name: orazaka-job-service
+      service-secret: ${IDENTITY_JWT_SECRET:sovkora-local-dev-identity-jwt-secret-256bit!}
+      service-name: sovkora-job-service
   messaging:
     exchanges:
-      # Orazaka's bus: the Krizaka building blocks this service embeds (billing-client) publish and
+      # Sovkora's bus: the Krizaka building blocks this service embeds (billing-client) publish and
       # listen on it.
       events: orazaka.events
       dead-letter: orazaka.dlx
@@ -191,4 +191,4 @@ krizaka:
       # The shared HS256 secret the identity service signs session and service tokens with.
       # krizaka-security validates every request locally with it and refuses to start when it is
       # shorter than 32 characters (256 bits).
-      secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+      secret: ${IDENTITY_JWT_SECRET:sovkora-local-dev-identity-jwt-secret-256bit!}

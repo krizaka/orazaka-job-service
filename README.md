@@ -2,30 +2,30 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/krizaka/.github/main/profile/assets/orazaka-dark.svg">
-  <img src="https://raw.githubusercontent.com/krizaka/.github/main/profile/assets/orazaka-light.svg" alt="Orazaka" width="96">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/krizaka/.github/main/profile/assets/sovkora-dark.svg">
+  <img src="https://raw.githubusercontent.com/krizaka/.github/main/profile/assets/sovkora-light.svg" alt="Sovkora" width="96">
 </picture>
 
-# Orazaka Job Service
+# Sovkora Job Service
 
 **The AI that never leaves home.**
 
-Asynchronous job executor of the Orazaka engine: drains the interactive and batch lanes, owns the capability registry and the worker registry.
+Asynchronous job executor of the Sovkora engine: drains the interactive and batch lanes, owns the capability registry and the worker registry.
 
-[![CI](https://github.com/krizaka/orazaka-job-service/actions/workflows/ci.yml/badge.svg)](https://github.com/krizaka/orazaka-job-service/actions/workflows/ci.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/krizaka/orazaka-job-service/badge)](https://scorecard.dev/viewer/?uri=github.com/krizaka/orazaka-job-service)
+[![CI](https://github.com/krizaka/sovkora-job-service/actions/workflows/ci.yml/badge.svg)](https://github.com/krizaka/sovkora-job-service/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/krizaka/sovkora-job-service/badge)](https://scorecard.dev/viewer/?uri=github.com/krizaka/sovkora-job-service)
 [![License: FSL-1.1-ALv2](https://img.shields.io/badge/license-FSL--1.1--ALv2-blue.svg)](LICENSE.md)
-[![Orazaka](https://img.shields.io/badge/part%20of-Orazaka-f67e23)](https://github.com/krizaka/orazaka#repositories)
-[![Docs](https://img.shields.io/badge/docs-krizaka.com-f67e23)](https://www.krizaka.com/en/products/orazaka)
+[![Sovkora](https://img.shields.io/badge/part%20of-Sovkora-f67e23)](https://github.com/krizaka/sovkora#repositories)
+[![Docs](https://img.shields.io/badge/docs-krizaka.com-f67e23)](https://www.krizaka.com/en/products/sovkora)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=krizaka_orazaka-job-service&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=krizaka_orazaka-job-service) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=krizaka_orazaka-job-service&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=krizaka_orazaka-job-service) [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=krizaka_orazaka-job-service&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=krizaka_orazaka-job-service) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=krizaka_orazaka-job-service&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=krizaka_orazaka-job-service) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=krizaka_orazaka-job-service&metric=coverage)](https://sonarcloud.io/summary/new_code?id=krizaka_orazaka-job-service)
 
-[Documentation](https://www.krizaka.com/en/products/orazaka) · [Website](https://www.krizaka.com) · [Krizaka on GitHub](https://github.com/krizaka)
+[Documentation](https://www.krizaka.com/en/products/sovkora) · [Website](https://www.krizaka.com) · [Krizaka on GitHub](https://github.com/krizaka)
 
 </div>
 <!-- /krizaka-header -->
 
-**Layer:** Orazaka AI engine · **Version:** `1.0.0-SNAPSHOT` · **License:** FSL-1.1-ALv2 ·
-part of the [Orazaka platform](https://github.com/krizaka/orazaka) by [Krizaka](https://krizaka.com)
+**Layer:** Sovkora AI engine · **Version:** `1.0.0-SNAPSHOT` · **License:** FSL-1.1-ALv2 ·
+part of the [Sovkora platform](https://github.com/krizaka/sovkora) by [Krizaka](https://krizaka.com)
 
 ## What it provides
 
@@ -38,7 +38,7 @@ hashed article versions, imports, the retrieval cache, rule proposals, the deman
 `law.*` settings (default and bounds, enforced by the database, on `orazaka_runtime_config`) all off and the sources
 `law-corpus` and `donnees-quebec` disabled by default).
 
-**External checks** (orazaka-packs#138): the engine's `orazaka.core.checks.courtrecords`, `.credit` and `.identity`
+**External checks** (sovkora-packs#138): the engine's `orazaka.core.checks.courtrecords`, `.credit` and `.identity`
 run here through one executor, handler key `check.external` (`ExternalCheckStrategy`), on the engine's
 `ExternalCheckService` and the mock connector until the pilot's go. Step inputs `subject` and `consentedPurposes` (a
 purpose is granted only when listed); outputs `outcome`, `refusal`, `category`, `providerRef`, `calls` and
@@ -53,23 +53,23 @@ executors in step, both ways.
 
 | | |
 |:---|:---|
-| Depends on | [`orazaka-build`](https://github.com/krizaka/orazaka-build) · [`orazaka-contracts`](https://github.com/krizaka/orazaka-contracts) · [`krizaka-users`](https://github.com/krizaka/krizaka-build/tree/main/krizaka-users) · [`krizaka-billing`](https://github.com/krizaka/krizaka-build/tree/main/krizaka-billing) · [`orazaka-ai-engine`](https://github.com/krizaka/orazaka-ai-engine) |
-| Used by | _no other Orazaka repository._ |
+| Depends on | [`sovkora-build`](https://github.com/krizaka/sovkora-build) · [`sovkora-contracts`](https://github.com/krizaka/sovkora-contracts) · [`krizaka-users`](https://github.com/krizaka/krizaka-build/tree/main/krizaka-users) · [`krizaka-billing`](https://github.com/krizaka/krizaka-build/tree/main/krizaka-billing) · [`sovkora-engine`](https://github.com/krizaka/sovkora-engine) |
+| Used by | _no other Sovkora repository._ |
 | Workspace path | `orazaka-apps/services/orazaka-job-service` |
 
 ## Build
 
-**Inside the Orazaka workspace** (recommended — every dependency is built from source):
+**Inside the Sovkora workspace** (recommended — every dependency is built from source):
 
 ```bash
-git clone https://github.com/krizaka/orazaka.git && cd orazaka
+git clone https://github.com/krizaka/sovkora.git && cd sovkora
 node scripts/workspace.mjs clone          # clones every repository at its workspace path
 ./mvnw -f orazaka-apps/services/orazaka-job-service/pom.xml verify
 ```
 
 **Standalone** — upstream artifacts must be in `~/.m2` (built by the workspace) or resolvable from
 GitHub Packages (`https://maven.pkg.github.com/krizaka/<repository>`, see the
-[workspace README](https://github.com/krizaka/orazaka#consuming-packages)):
+[workspace README](https://github.com/krizaka/sovkora#consuming-packages)):
 
 ```bash
 ./mvnw verify
@@ -79,7 +79,7 @@ Requirements: JDK 21, Docker (Testcontainers integration tests).
 
 ## Governance
 
-This repository follows the Orazaka governance contract — [AGENTS.md](https://github.com/krizaka/orazaka/blob/main/AGENTS.md)
+This repository follows the Sovkora governance contract — [AGENTS.md](https://github.com/krizaka/sovkora/blob/main/AGENTS.md)
 in the workspace is normative; the local [AGENTS.md](AGENTS.md) only scopes it to this repository.
 
 ## License

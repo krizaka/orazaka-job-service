@@ -1,0 +1,193 @@
+package com.krizaka.sovkora.jobservice.infrastructure.adapter.amqp;
+
+import com.krizaka.sovkora.assets.application.service.EncryptedAssetService;
+import com.krizaka.sovkora.assets.infrastructure.config.AssetEncryptionProperties;
+import com.krizaka.sovkora.core.domain.model.image.ImageReference;
+import com.krizaka.sovkora.core.domain.model.image.ImageRequest;
+import com.krizaka.sovkora.core.domain.model.image.ImageResponse;
+import com.krizaka.sovkora.core.domain.model.image.ImageUsage;
+import com.krizaka.sovkora.core.domain.ports.inbound.AiClient;
+import com.krizaka.sovkora.jobs.domain.exception.JobExecutionException;
+import com.krizaka.sovkora.jobs.domain.model.JobCommand;
+import com.krizaka.sovkora.jobs.domain.model.JobExecutionContext;
+import com.krizaka.sovkora.jobs.domain.model.JobExecutionResult;
+import com.krizaka.sovkora.jobs.domain.port.JobExecutor;
+import com.krizaka.sovkora.jobservice.catalog.ModelResolution;
+import com.krizaka.sovkora.jobservice.infrastructure.support.MediaFileStore;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+/** Executes image generation jobs via the AI client's image endpoint. */
+@Component
+public final class ImageGenerationStrategy implements JobExecutor {
+
+  private static final Logger logger = LoggerFactory.getLogger(ImageGenerationStrategy.class);
+
+  /** stable-diffusion.cpp reads the seed as a signed 64-bit integer; stay in the safe range. */
+  private static final long MAX_SEED = 1L << 32;
+
+  /** The one file an image job writes: what a later job reads back as a reference. */
+  private static final String IMAGE_FILE = "image.png";
+
+  private final AiClient aiClient;
+  private final ModelResolver modelResolver;
+  private final MediaFileStore mediaFileStore;
+  private final EncryptedAssetService encryptedAssetService;
+  private final boolean acceptPlaintext;
+  private final String uploadDir;
+
+  public ImageGenerationStrategy(
+      AiClient aiClient,
+      ModelResolver modelResolver,
+      MediaFileStore mediaFileStore,
+      EncryptedAssetService encryptedAssetService,
+      AssetEncryptionProperties encryption,
+      @Value("${spring.servlet.multipart.location:var/sovkora-uploads}") String uploadDir) {
+    this.aiClient = aiClient;
+    this.modelResolver = modelResolver;
+    this.mediaFileStore = mediaFileStore;
+    this.encryptedAssetService = encryptedAssetService;
+    this.acceptPlaintext = encryption.acceptPlaintext();
+    this.uploadDir = uploadDir;
+  }
+
+  @Override
+  public String handlerKey() {
+    return "image.generate";
+  }
+
+  /** The recipe names the pictures it followed, so the same shot can be made again. */
+  private static void recordReferences(
+      Map<String, Object> result,
+      ImageReferenceInputs inputs,
+      List<ImageReference> references,
+      String notice) {
+    if (!references.isEmpty()) {
+      result.put("references", inputs.assetIds());
+      result.put("referenceWeight", inputs.weight());
+    }
+    if (notice != null) {
+      result.put("referenceNotice", notice);
+    }
+  }
+
+  @Override
+  public JobExecutionResult execute(JobCommand message, JobExecutionContext context)
+      throws JobExecutionException {
+    String prompt = message.requirePrompt();
+    ImageGenerationPayload requested;
+    ImageReferenceInputs referenceInputs;
+    List<ImageReference> references;
+    try {
+      // A seed is always chosen here, never left to the server: the job reports the seed it ran,
+      // so any image can be made again — same prompt, size, model and seed, same picture.
+      requested =
+          ImageGenerationPayload.from(message.payload())
+              .withSeedIfAbsent(ThreadLocalRandom.current().nextLong(MAX_SEED));
+      // The same character in every shot (krizaka-internal#158): pictures the image must follow,
+      // resolved among this actor's own files and refused by name when they are not.
+      referenceInputs = ImageReferenceInputs.from(message.payload());
+      // Through the store: a reference is sealed at rest like every input (krizaka-internal#2090).
+      references =
+          referenceInputs.load(
+              uploadDir,
+              message.userId(),
+              file -> encryptedAssetService.readAllBytes(file, acceptPlaintext),
+              jobId -> mediaFileStore.read(uploadDir, message.userId(), jobId, IMAGE_FILE));
+    } catch (IllegalArgumentException malformed) {
+      throw new JobExecutionException(malformed.getMessage(), malformed);
+    }
+
+    ModelResolution resolution =
+        modelResolver.resolution(message.resolvedModel(), "image", "flux-2-klein-4b");
+    String model = resolution.model();
+    ImageRequest imageRequest =
+        new ImageRequest(
+            prompt,
+            requested.width(),
+            requested.height(),
+            model,
+            Map.of(),
+            ExecutionContextMapper.toEngineContext(context),
+            requested.direction(),
+            references);
+    long started = System.nanoTime();
+    ImageResponse imageResponse = aiClient.image(imageRequest);
+    long generationMs = (System.nanoTime() - started) / 1_000_000;
+
+    String translatedUrl = "";
+    byte[] imgData = imageResponse.imageData();
+
+    if (imgData == null && imageResponse.url() != null) {
+      String url = imageResponse.url().trim();
+      if (url.startsWith("data:")) {
+        imgData = decodeDataUrl(url);
+      } else if (url.startsWith("http://") || url.startsWith("https://")) {
+        translatedUrl = url;
+      }
+    }
+
+    if (imgData != null && imgData.length > 0) {
+      translatedUrl =
+          mediaFileStore.save(uploadDir, message.userId(), message.jobId(), imgData, IMAGE_FILE);
+    } else if (translatedUrl.isEmpty() && imageResponse.url() != null) {
+      translatedUrl = imageResponse.url();
+    }
+
+    Map<String, Object> result = new HashMap<>();
+    result.put("url", translatedUrl);
+    result.put("format", imageResponse.format() != null ? imageResponse.format() : "png");
+    // How the image was made, kept with it: what a gallery caption or a re-run needs, and what
+    // "generated locally in N s" is measured on.
+    result.put("model", model);
+    if (resolution.notice() != null) {
+      // The default was not available and another model made the image: say so with the image.
+      logger.warn("Job {}: {}", message.jobId(), resolution.notice());
+      result.put("modelNotice", resolution.notice());
+    }
+    result.put("seed", String.valueOf(requested.direction().seed()));
+    recordReferences(result, referenceInputs, references, imageResponse.notice());
+    result.put("generationMs", generationMs);
+
+    // The generation's parameters, reported as MEASUREMENTS — never as a unit or a price. The
+    // ledger derives IMAGE_STEP (images x steps x megapixels) from the pinned rate; this executor
+    // only says what ran. Without it, image generation reported wall clock and nothing priceable,
+    // so every showcase step of every Studio run settled at zero (ADR-047).
+    ImageUsage usage = imageResponse.usage();
+    if (!usage.reported()) {
+      // Unreported is not zero: releasing the hold beats billing a guess, exactly as the chat
+      // strategy decides for a provider that returns no usage block.
+      logger.warn(
+          "No generation parameters reported for job {}; this step contributes nothing to the"
+              + " run's cost rather than being billed at an estimate",
+          message.jobId());
+      return JobExecutionResult.of(result);
+    }
+    return new JobExecutionResult(
+        result,
+        Map.of(
+            "images", usage.images(),
+            "steps", usage.steps(),
+            "width", usage.width(),
+            "height", usage.height()),
+        model);
+  }
+
+  private static byte[] decodeDataUrl(String url) {
+    try {
+      String base64 = url.substring(url.indexOf(",") + 1);
+      return Base64.getDecoder().decode(base64);
+    } catch (IllegalArgumentException e) {
+      LoggerFactory.getLogger(ImageGenerationStrategy.class)
+          .warn("Failed to decode inline data URL", e);
+      return new byte[0];
+    }
+  }
+}

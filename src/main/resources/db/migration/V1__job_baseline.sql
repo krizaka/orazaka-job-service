@@ -1,5 +1,5 @@
 -- ============================================================================
--- ORAZAKA — Local DB bootstrap · 30 — JOB ORCHESTRATION + CONFIG PLANE
+-- SOVKORA — Local DB bootstrap · 30 — JOB ORCHESTRATION + CONFIG PLANE
 -- ----------------------------------------------------------------------------
 -- Future owner: Job Orchestration service — async COMMAND lifecycle (jobs,
 -- outbox, consumer dedup, routing rules) plus the DB-driven config plane it
@@ -163,7 +163,7 @@ CREATE TABLE orazaka_capabilities (
     -- contains() chain over feature_key — the last such chain on the money path (ADR-038).
     -- Values below are a TRANSCRIPTION of what that chain returned, so the change is provably
     -- behaviour-preserving; one of them is wrong and is flagged where it is seeded.
-    -- EXTERNAL_CHECK (orazaka-packs#138): a call to a provider outside the engine, per CALL. The
+    -- EXTERNAL_CHECK (sovkora-packs#138): a call to a provider outside the engine, per CALL. The
     -- constraint is named so the EXTERNAL CHECKS block below can widen an existing database's.
     billable_capability VARCHAR(20) NOT NULL DEFAULT 'CHAT'
                         CONSTRAINT ck_orazaka_capabilities_billable_capability
@@ -248,7 +248,7 @@ CREATE TABLE orazaka_models (
     -- The voice a locale gets when the caller names none. One per (category, locale), enforced
     -- below; independent of is_default, which stays the category's default for the job plane.
     locale_default BOOLEAN NOT NULL DEFAULT FALSE,
-    -- The registry metadata the marketing site and the docs publish (krizaka/orazaka scripts/generate-docs.mjs
+    -- The registry metadata the marketing site and the docs publish (krizaka/sovkora scripts/generate-docs.mjs
     -- reads it; nothing about a model is typed anywhere else). Routing never reads these columns.
     vendor VARCHAR(120),            -- who trained the base model
     family VARCHAR(120),            -- the model line it belongs to
@@ -293,8 +293,8 @@ CREATE TABLE pipeline_interceptor_config (
 CREATE UNIQUE INDEX idx_pipeline_interceptor_config_key ON pipeline_interceptor_config (interceptor_key);
 CREATE INDEX idx_pipeline_interceptor_config_order ON pipeline_interceptor_config (execution_order);
 
--- The semantic cache's answers (ai-engine#40). Kept identical to orazaka-ai-engine
--- orazaka-interceptors/src/main/resources/db/semantic-cache.sql and to the workspace migration
+-- The semantic cache's answers (ai-engine#40). Kept identical to sovkora-engine
+-- sovkora-interceptors/src/main/resources/db/semantic-cache.sql and to the workspace migration
 -- infra/migrations/2026-10-22-semantic-cache.sql.
 -- The pgvector extension is created by the database bootstrap (as the admin role), never by a migration: only assert it.
 DO $$
@@ -381,7 +381,7 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('piper-fr-tom-medium', 'Piper Tom (fr-FR, masculine)', 'speech', 'Medium,Fr', 'localai', FALSE, NULL, NULL, NULL),
 ('tts-1', 'OpenAI TTS-1', 'speech', 'Alloy,Echo,Fable,Onyx,Nova,Shimmer', 'localai', FALSE, NULL, NULL, NULL),
 -- Image Models — what sd-server (stable-diffusion.cpp, Metal, :8086) can actually serve. Each
--- model_name is the id of an install recipe of the orazaka CLI (`orazaka models image`), which
+-- model_name is the id of an install recipe of the sovkora CLI (`sovkora models image`), which
 -- launches the DEFAULT row and nothing else: sd-server serves one model at a time, and a row it
 -- cannot serve would put the wrong model's name on the image and on the bill. max_steps is the
 -- model's own step count — the engine sends it with every request and IMAGE_STEP bills it.
@@ -389,7 +389,7 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('flux-2-klein-4b', 'FLUX.2 [klein] 4B', 'image', NULL, 'localai-image', TRUE, 4, NULL, NULL),
 ('z-image-turbo', 'Z-Image Turbo', 'image', NULL, 'localai-image', FALSE, 8, NULL, NULL),
 ('v1-5-pruned-emaonly', 'Stable Diffusion 1.5', 'image', NULL, 'localai-image', FALSE, 20, NULL, NULL),
--- Hosted: Stable Diffusion 3.5 Large on DigitalOcean serverless inference ($0.08 an image), routed by Orazaka — no declared steps (ImageGeneratorClientImpl).
+-- Hosted: Stable Diffusion 3.5 Large on DigitalOcean serverless inference ($0.08 an image), routed by Sovkora — no declared steps (ImageGeneratorClientImpl).
 ('stable-diffusion-3.5-large', 'Stable Diffusion 3.5 Large (DigitalOcean)', 'image', NULL, 'do-inference-images', FALSE, NULL, NULL, NULL),
 -- Video Models
 -- SVD-XT is HEAVY (needs >64GB unified memory); kept in the catalog but NOT the default.
@@ -402,21 +402,21 @@ INSERT INTO orazaka_models (model_name, model_label, category, options, provider
 ('mlx-stable-diffusion-video', 'MLX Native Video', 'video', NULL, 'localai-video', FALSE, 25, 14, 'APPLE_SILICON_MLX'),
 ('stable-video-diffusion-img2vid-xt-mps-fp32', 'SVD XT (PyTorch MPS Float32)', 'video', NULL, 'localai-video', FALSE, 25, 14, 'APPLE_SILICON_MLX'),
 -- Wan 2.x (Apache-2.0) — the 9:16 video of the hourly GPU host (ADR-077), served by the CUDA image of
--- orazaka-worker-media. supported_hardware stays NULL: the core does not run them, a worker does, and
+-- sovkora-worker-media. supported_hardware stays NULL: the core does not run them, a worker does, and
 -- the worker refuses by name a model it cannot serve; the HOST check would grey them out on every core
 -- that is not itself a GPU machine (dev runs on App Platform). recommended_fps is the model's own.
 ('wan2.2-ti2v-5b', 'Wan 2.2 TI2V 5B (9:16, GPU)', 'video', NULL, 'localai-video', FALSE, 40, 24, NULL),
 ('wan2.1-t2v-1.3b', 'Wan 2.1 T2V 1.3B (9:16, GPU)', 'video', NULL, 'localai-video', FALSE, 30, 16, NULL),
--- Wan 2.2 A14B on our own 80 GB card at 720p (blueprint video-generation 1.4.0, orazaka-worker-media models.yaml): the same model as the serverless one below, made here.
+-- Wan 2.2 A14B on our own 80 GB card at 720p (blueprint video-generation 1.4.0, sovkora-worker-media models.yaml): the same model as the serverless one below, made here.
 ('wan2.2-t2v-a14b', 'Wan 2.2 T2V A14B (720p, 80 GB GPU)', 'video', NULL, 'localai-video', FALSE, 40, 16, NULL),
 ('wan2.2-i2v-a14b', 'Wan 2.2 I2V A14B (720p, 4-step distill)', 'video', NULL, 'localai-video', FALSE, 4, 16, NULL),
--- The image-to-video bake-off's winners (docs/_generated/MEASURED_RUNS.md, krizaka/orazaka-worker-media models.yaml `kit`): LTX-Video 0.9.8 for landscape and iteration,
+-- The image-to-video bake-off's winners (docs/_generated/MEASURED_RUNS.md, krizaka/sovkora-worker-media models.yaml `kit`): LTX-Video 0.9.8 for landscape and iteration,
 -- the same I2V A14B checkpoint at its full 40-step schedule for people in 9:16.
 ('ltx-video-0.9.8-13b-distilled', 'LTX-Video 0.9.8 13B distilled (720p, GPU)', 'video', NULL, 'localai-video', FALSE, 8, 24, NULL),
 ('wan2.2-i2v-a14b-hq', 'Wan 2.2 I2V A14B (720p, 40 steps)', 'video', NULL, 'localai-video', FALSE, 40, 16, NULL),
--- Wan 2.2 A14B is made by the provider `do-inference` (DigitalOcean serverless) and run by Orazaka: the media worker routes it (orazaka-worker-media, app/remote_video.py).
+-- Wan 2.2 A14B is made by the provider `do-inference` (DigitalOcean serverless) and run by Sovkora: the media worker routes it (sovkora-worker-media, app/remote_video.py).
 ('wan2-2-t2v-a14b', 'Wan 2.2 T2V A14B (serverless)', 'video', NULL, 'do-inference', FALSE, 0, 16, NULL),
--- The optional upscale step of the video Studio (orazaka-worker-media app/upscale.py, blueprint video-generation 1.6.0): SeedVR2 3B, Apache-2.0, run by the same GPU worker after the clip. Never a default: the Studio's `upscale` input is none until asked.
+-- The optional upscale step of the video Studio (sovkora-worker-media app/upscale.py, blueprint video-generation 1.6.0): SeedVR2 3B, Apache-2.0, run by the same GPU worker after the clip. Never a default: the Studio's `upscale` input is none until asked.
 ('seedvr2-3b', 'SeedVR2 3B (video upscale, GPU)', 'video-upscale', NULL, 'localai-video', FALSE, NULL, NULL, NULL),
 -- Vision Models
 -- The vision DEFAULT is llava, not llama3.2-vision (ADR-042). The latter is the better model and
@@ -460,7 +460,7 @@ ON CONFLICT (model_name) DO NOTHING;
 -- chooses to serve one, and the policy stays the operator's (a pack's scopeGuard and safety, enforced
 -- before any model runs; ADR-051, ADR-055). Licences: Apache-2.0 (Qwen), Meta Llama 3 Community Licence
 -- (Dolphin), Gemma Terms of Use (Gemma). The 27B needs a 32 GB+ machine. Migration for an existing
--- database: krizaka/orazaka infra/migrations/2026-10-11-uncensored-models.sql.
+-- database: krizaka/sovkora infra/migrations/2026-10-11-uncensored-models.sql.
 INSERT INTO orazaka_models (model_name, model_label, category, options, provider_name, is_default) VALUES
 ('huihui_ai/qwen2.5-abliterate:7b', 'Qwen 2.5 7B — unfiltered', 'chat', 'q4_K_M', 'ollama', FALSE),
 ('dolphin-llama3:8b', 'Dolphin Llama 3 8B — unfiltered', 'chat', 'q4_K_M', 'ollama', FALSE),
@@ -568,7 +568,7 @@ INSERT INTO orazaka_capabilities
 -- generates rather than analyses. billable_unit AUDIO_MINUTE (ADR-066): an analysis consumes no
 -- output seconds — OUTPUT_SECOND would be a fabricated quantity — and both halves of the work,
 -- keyframe extraction and transcription, scale with how long the SOURCE is. It is priced under the
--- engine name `orazaka-video-analysis`, the way composition is priced under `orazaka-compose`, so
+-- engine name `sovkora-video-analysis`, the way composition is priced under `sovkora-compose`, so
 -- VIDEO's diffusion default cannot be charged for reading a file.
 ('orazaka.core.media.video.analysis', 'video.analyze', 'job.media.generate', 'AUDIO_MINUTE', 'VIDEO', 'BATCH',
   $${"type": "object", "properties": {"assetId": {"type": "string", "format": "asset-id"}, "model": {"type": "string"}}, "required": ["assetId"]}$$::jsonb,
@@ -582,12 +582,12 @@ INSERT INTO orazaka_capabilities
   $${"type": "object", "properties": {"content": {"type": "string"}, "metadata": {"type": "object"}}, "required": ["content"]}$$::jsonb, true),
 -- Studio media composition (ADR-034 §7.2): photos + clip + voiceover + captions + brand
 -- overlay → 9:16 MP4. Or, given `clips` (earlier steps' video outputs) and an `edit` decision list, the cut of a
--- cinematic short (krizaka/orazaka ADR-080, orazaka-worker-media app/cut.py): trims, ramps, transitions, grade, titles. It is a CAPABILITY, not Studio code — the existing Python
--- orazaka-worker-media executes it (app/composer.py, bound to job.compose.*).
+-- cinematic short (krizaka/sovkora ADR-080, sovkora-worker-media app/cut.py): trims, ramps, transitions, grade, titles. It is a CAPABILITY, not Studio code — the existing Python
+-- sovkora-worker-media executes it (app/composer.py, bound to job.compose.*).
 -- ENABLED since phase 4, when that worker branch landed.
 -- billable_unit OUTPUT_SECOND (ADR-041). The worker has always reported frames and fps
 -- (app/composer.py), so the duration needed to price this was on the wire the whole time and only
--- the unit was missing. It is priced at the (VIDEO, 'orazaka-compose') pricebook row rather than
+-- the unit was missing. It is priced at the (VIDEO, 'sovkora-compose') pricebook row rather than
 -- VIDEO's default: both are video output, but an ffmpeg concat is not a diffusion run and charging
 -- it the generation rate would make composition the most expensive step of a reel by an order of
 -- magnitude it does not deserve.
@@ -600,12 +600,12 @@ INSERT INTO orazaka_capabilities
   $${"type": "object", "properties": {"url": {"type": "string"}, "assetId": {"type": "string"}, "format": {"type": "string"}, "metrics": {"type": "object"}}, "required": ["url"]}$$::jsonb, true)
 ON CONFLICT (feature_key) DO NOTHING;
 
--- ── Sound for a video (krizaka/orazaka-packs#25) ──────────────────────────────────────────────────────
+-- ── Sound for a video (krizaka/sovkora-packs#25) ──────────────────────────────────────────────────────
 -- Every generated clip was silent. `orazaka.studio.media.sound` gives one its sound: a music bed and/or
 -- foley and/or a voice-over (the speech asset of the Piper voices), mixed with ducking, levelled to
 -- -14 LUFS and muxed as AAC into the mp4; the silent original is kept (`silentUrl`). It is ffmpeg plus a
 -- local model on the media worker's host, so it has a queue of its own on that worker (`job.sound.*`, only where MEDIA_SOUND_ENABLED) under its own
--- key and is priced as that worker's other ffmpeg work: OUTPUT_SECOND at the (VIDEO, 'orazaka-compose') row.
+-- key and is priced as that worker's other ffmpeg work: OUTPUT_SECOND at the (VIDEO, 'sovkora-compose') row.
 -- `video` is the URL a previous step returned or an asset id — only the actor's own files resolve.
 -- `foleyModel` is explicit on purpose: the only foley weights this worker can run are non-commercial.
 INSERT INTO orazaka_capabilities
@@ -693,8 +693,8 @@ UPDATE orazaka_models SET description = 'SVD XT in PyTorch MPS float32. Highest 
 UPDATE orazaka_models SET description = 'ByteDance AnimateDiff Lightning weights (MLX). Fast 8-step text-to-video at ~12fps.' WHERE model_name = 'ByteDance/AnimateDiff-Lightning';
 UPDATE orazaka_models SET description = 'Wan 2.2 TI2V 5B (Apache-2.0) — vertical shorts at 704x1280, 5 s at 24 fps, on the GPU host (48 GB). The 9:16 model of the demos.' WHERE model_name = 'wan2.2-ti2v-5b';
 UPDATE orazaka_models SET description = 'Wan 2.1 T2V 1.3B (Apache-2.0) — vertical clips at 480x832, 5 s at 16 fps, on the small GPU host (20 GB). Fast drafts.' WHERE model_name = 'wan2.1-t2v-1.3b';
-UPDATE orazaka_models SET description = 'Wan 2.2 A14B (Apache-2.0) on DigitalOcean serverless inference, routed by Orazaka — text-to-video, 832x480 in 16:9, 5 s at 16 fps, $0.60 a clip, the seed makes the same shot again. The cinematic model of the demos.' WHERE model_name = 'wan2-2-t2v-a14b';
-UPDATE orazaka_models SET description = 'Stable Diffusion 3.5 Large (Stability AI Community Licence) on DigitalOcean serverless inference, routed by Orazaka — $0.08 an image, 1024x1024, the seed is not honoured by the provider.' WHERE model_name = 'stable-diffusion-3.5-large';
+UPDATE orazaka_models SET description = 'Wan 2.2 A14B (Apache-2.0) on DigitalOcean serverless inference, routed by Sovkora — text-to-video, 832x480 in 16:9, 5 s at 16 fps, $0.60 a clip, the seed makes the same shot again. The cinematic model of the demos.' WHERE model_name = 'wan2-2-t2v-a14b';
+UPDATE orazaka_models SET description = 'Stable Diffusion 3.5 Large (Stability AI Community Licence) on DigitalOcean serverless inference, routed by Sovkora — $0.08 an image, 1024x1024, the seed is not honoured by the provider.' WHERE model_name = 'stable-diffusion-3.5-large';
 UPDATE orazaka_models SET description = 'LLaVA multimodal model — describe and answer questions about images.' WHERE model_name = 'llava:latest';
 UPDATE orazaka_models SET description = 'LLaVA v1.6 — improved image understanding and OCR over base LLaVA.' WHERE model_name = 'llava:v1.6';
 UPDATE orazaka_models SET description = 'BakLLaVA (Mistral-based) vision model. Compact image understanding.' WHERE model_name = 'bakllava:latest';
@@ -710,7 +710,7 @@ UPDATE orazaka_models SET description = 'Gemma 3 27B Instruct with the refusal d
 
 -- Registry metadata (vendor, family, capabilities, where it runs, licence from the model's own card, context window).
 -- A model without it stays 'internal' — in the catalogue, never published. Provider-hosted models (runs_on = 'provider')
--- are seeded by the deployment that has the provider (krizaka/orazaka infra/deploy/dev-model-registry.sql).
+-- are seeded by the deployment that has the provider (krizaka/sovkora infra/deploy/dev-model-registry.sql).
 UPDATE orazaka_models SET vendor = 'Alibaba Cloud', family = 'Qwen 2.5', capabilities = 'chat', runs_on = 'local', runtime = 'Ollama', open_weights = TRUE, licence = 'Apache-2.0', licence_url = 'https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/LICENSE', commercial_use = 'yes', context_window = 32768, status = 'available' WHERE model_name = 'qwen2.5:7b';
 UPDATE orazaka_models SET status = 'internal' WHERE model_name = 'huihui_ai/qwen2.5-abliterate:7b';
 UPDATE orazaka_models SET status = 'internal' WHERE model_name = 'dolphin-llama3:8b';
@@ -760,7 +760,7 @@ CREATE TABLE user_mcp_servers (
     user_id VARCHAR(255) NOT NULL,
     label VARCHAR(255) NOT NULL,
     url VARCHAR(1000) NOT NULL,
-    -- Sealed (v1.<key>.<wrapped>.<nonce>.<ciphertext>) for its owner, never in clear (orazaka-ai-engine#58, ADR-054).
+    -- Sealed (v1.<key>.<wrapped>.<nonce>.<ciphertext>) for its owner, never in clear (sovkora-engine#58, ADR-054).
     auth_token TEXT,
     enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -774,7 +774,7 @@ CREATE TABLE platform_mcp_servers (
     url VARCHAR(1000),
     command VARCHAR(1000),
     args VARCHAR(2000),
-    -- Sealed for the platform scope, never in clear (orazaka-ai-engine#58, ADR-054).
+    -- Sealed for the platform scope, never in clear (sovkora-engine#58, ADR-054).
     auth_token TEXT,
     enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -801,7 +801,7 @@ CREATE TABLE orazaka_tools_cache (
 );
 
 INSERT INTO platform_tool_configs (tool_id, cache_enabled, cache_ttl_seconds, rag_enabled, chunker_type, source_table) VALUES
--- searchKnowledge reads the knowledge corpus, not the web; it was named searchWeb (orazaka-ai-engine#59, ADR-087).
+-- searchKnowledge reads the knowledge corpus, not the web; it was named searchWeb (sovkora-engine#59, ADR-087).
 ('searchKnowledge', TRUE, 3600, TRUE, 'MARKDOWN_CHUNKERS', 'orazaka_tools_rag_source')
 ON CONFLICT (tool_id) DO NOTHING;
 
@@ -814,7 +814,7 @@ UPDATE orazaka_models SET typical_seconds = 8, price_cents = 8 WHERE model_name 
 UPDATE orazaka_models SET typical_seconds = 131, price_cents = 60 WHERE model_name = 'wan2-2-t2v-a14b';
 
 -- ============================================================================
--- GROUNDED RESEARCH (ADR-087, orazaka-job-service#62) — the engine reads a source and cites it.
+-- GROUNDED RESEARCH (ADR-087, sovkora-job-service#62) — the engine reads a source and cites it.
 -- Sources are rows the administrator manages; what was read is stored once (URL + content hash); every search or
 -- fetch leaves an audit row, never the query or the path in clear (ADR-064). Off until research.enabled is true.
 -- ============================================================================
@@ -909,11 +909,11 @@ INSERT INTO orazaka_runtime_config (config_key, config_value, value_type, descri
 ('research.quote.max-chars', '300', 'int', 'Longest quoted passage in a citation.'),
 ('research.verify.mode', 'MARK', 'string', 'MARK keeps an unverified claim as TO_VALIDATE; STRICT drops it.'),
 ('research.cache.default-freshness-seconds', '86400', 'int', 'Cache lifetime when a source sets none.'),
-('research.user-agent', 'OrazakaResearch/0.1 (+https://www.orazaka.com)', 'string', 'The honest user agent of every research request.')
+('research.user-agent', 'SovkoraResearch/0.1 (+https://www.sovkora.com)', 'string', 'The honest user agent of every research request.')
 ON CONFLICT (config_key) DO NOTHING;
 
 -- The first sources, all disabled: the administrator turns one on. LégisQuébec and the Registraire stay off until
--- their access conditions are validated (krizaka/orazaka#393).
+-- their access conditions are validated (krizaka/sovkora#393).
 INSERT INTO research_source (source_key, kind, provider, base_url, allow_patterns, freshness_seconds, enabled) VALUES
 ('justice-laws', 'OFFICIAL', 'justice-laws', 'https://laws-lois.justice.gc.ca', '{laws-lois.justice.gc.ca/**}', 604800, FALSE),
 ('canlii', 'OFFICIAL', 'canlii', 'https://api.canlii.org', '{api.canlii.org/**,www.canlii.org/**}', 604800, FALSE),
@@ -923,10 +923,10 @@ INSERT INTO research_source (source_key, kind, provider, base_url, allow_pattern
 ON CONFLICT (source_key) DO NOTHING;
 
 -- ============================================================================
--- LAW CORPUS (ADR-089 §2 and §10, orazaka-job-service#67) — the dated, hashed text of the law the engine derives its
+-- LAW CORPUS (ADR-089 §2 and §10, sovkora-job-service#67) — the dated, hashed text of the law the engine derives its
 -- checks from. Beside the research tables, in this service's database (connection budget, ADR-083). Off until
 -- law.corpus.enabled is true; the sources law-corpus and donnees-quebec are seeded disabled. The same block is the
--- dev-deploy migration `law-corpus` (krizaka/orazaka): additive and idempotent, the two must stay in step.
+-- dev-deploy migration `law-corpus` (krizaka/sovkora): additive and idempotent, the two must stay in step.
 -- ============================================================================
 
 -- Settings carry their default and bounds, like studio_runtime_config. A row without a default is as before; a row
@@ -1105,7 +1105,7 @@ ON CONFLICT (config_key) DO NOTHING;
 
 -- The two sources of the corpus, disabled: law-corpus reads law_article_version (no network, so no pattern);
 -- donnees-quebec downloads the Données Québec zips. legisquebec stays disabled above; its URL is the one every
--- citation shows. The Données Québec licence is krizaka/orazaka#393.
+-- citation shows. The Données Québec licence is krizaka/sovkora#393.
 INSERT INTO research_source (source_key, kind, provider, base_url, allow_patterns, freshness_seconds, enabled) VALUES
 ('law-corpus', 'OFFICIAL', 'law-corpus', NULL, '{}', 86400, FALSE),
 ('donnees-quebec', 'OFFICIAL', 'donnees-quebec', 'https://www.donneesquebec.ca',
@@ -1116,10 +1116,10 @@ ON CONFLICT (source_key) DO NOTHING;
 -- orazaka.core.chat.completion. The model tokens of the answer are billed as CHAT / KILOTOKEN; each research
 -- operation (search, fetch, corpus read) is a RESEARCH hold priced by (RESEARCH, <provider key>, CALL) and counted
 -- in the run budget by the engine (ResearchMeter, ADR-088), so no new billable_capability exists here. The inputs
--- are the ones orazaka-packs' document-validation sends (sources, jurisdiction, asOf, language, question, targets,
--- document); the output contract is the citation shape of orazaka-studio CitationContract. Nothing calls it while
+-- are the ones sovkora-packs' document-validation sends (sources, jurisdiction, asOf, language, question, targets,
+-- document); the output contract is the citation shape of sovkora-studio-service CitationContract. Nothing calls it while
 -- law.lecture.enabled and research.enabled are false (both seeded off). The engine's executor for handler_key
--- research.grounded is orazaka-ai-engine's to register; until then ExecutorCoherenceService reports it at startup.
+-- research.grounded is sovkora-engine's to register; until then ExecutorCoherenceService reports it at startup.
 INSERT INTO orazaka_capabilities
     (feature_key, handler_key, routing_key,
      billable_unit, billable_capability, latency_class, input_schema, output_schema, is_enabled) VALUES
@@ -1129,20 +1129,20 @@ INSERT INTO orazaka_capabilities
 ON CONFLICT (feature_key) DO NOTHING;
 
 -- ============================================================================
--- EXTERNAL CHECKS (orazaka-packs#138, orazaka-ai-engine#90) — court records, credit and identity as engine
+-- EXTERNAL CHECKS (sovkora-packs#138, sovkora-engine#90) — court records, credit and identity as engine
 -- capabilities a blueprint step names by feature key. The engine's ExternalCheckService is the one door (consent,
 -- key, hold, provider, audit, in that order); this service runs it in-process through the executor whose
 -- handlerKey() is 'check.external' (ExternalCheckStrategy). Still on the mock connector until the pilot's go.
--- The same block is the dev-deploy migration `external-checks` (krizaka/orazaka): additive and idempotent
+-- The same block is the dev-deploy migration `external-checks` (krizaka/sovkora): additive and idempotent
 -- (constraint replaced by name, IF NOT EXISTS, ON CONFLICT DO NOTHING), the two must stay in step;
 -- ExternalCheckSchemaIT applies it twice on a database that predates it. Runs in orazaka_db.
 --
 -- The subject pepper (setting checks.subject-pepper, sealed) is deliberately NOT seeded: no row, no check. An
--- operator seals one (orazaka-ai-engine, CheckSubjectPepperTool); until then every check job fails closed.
+-- operator seals one (sovkora-engine, CheckSubjectPepperTool); until then every check job fails closed.
 -- ============================================================================
 
 -- billable_capability EXTERNAL_CHECK, priced by the (EXTERNAL_CHECK, <provider>, CALL) rows of credit_pricebook
--- (krizaka-billing#57), and NONE: declared not billable on its own (orazaka-packs#162). A database created before this block has the column's unnamed CHECK without it.
+-- (krizaka-billing#57), and NONE: declared not billable on its own (sovkora-packs#162). A database created before this block has the column's unnamed CHECK without it.
 ALTER TABLE orazaka_capabilities DROP CONSTRAINT IF EXISTS orazaka_capabilities_billable_capability_check;
 ALTER TABLE orazaka_capabilities DROP CONSTRAINT IF EXISTS ck_orazaka_capabilities_billable_capability;
 ALTER TABLE orazaka_capabilities ADD CONSTRAINT ck_orazaka_capabilities_billable_capability
@@ -1183,8 +1183,8 @@ CREATE TRIGGER trg_external_check_audit_append_only BEFORE UPDATE ON external_ch
 -- executor never branches on a key of its own. routing_key job.text.process, INTERACTIVE: the check runs in this
 -- process (job.text.* is drained here) and its duration is the provider's answer time, not something the user
 -- supplied. billable_unit CALL: one call when the provider answered (MATCH, NO_MATCH), none otherwise
--- (consumption {calls: 0|1}; CallConsumption releases the hold on 0). The contract is orazaka-packs'
--- tests/contracts/orazaka-core-checks.json: inputs subject + consentedPurposes (a purpose is granted only when
+-- (consumption {calls: 0|1}; CallConsumption releases the hold on 0). The contract is sovkora-packs'
+-- tests/contracts/sovkora-core-checks.json: inputs subject + consentedPurposes (a purpose is granted only when
 -- listed), outputs outcome, refusal, category, providerRef, calls and resultJson (the same object as a JSON string).
 INSERT INTO orazaka_capabilities
     (feature_key, handler_key, routing_key,
@@ -1207,13 +1207,13 @@ ON CONFLICT (feature_key) DO NOTHING;
 -- ============================================================================
 
 -- ── 2026-10-27-code-agent-routing (section 1; the tool roles of section 2 belong to the knowledge context) ──
--- ADR-093 (Code on the Mac, krizaka/orazaka#450): the data of the Studio turn of `code.issue-to-pr`. Additive and
+-- ADR-093 (Code on the Mac, krizaka/sovkora#450): the data of the Studio turn of `code.issue-to-pr`. Additive and
 -- idempotent. Runs in orazaka_db. The prices are the billing database's own file: 2026-10-27-pricebook-code-agent.sql.
 --
 -- 1. Routing is data (ADR-029). A feature key maps to registry models, best first; the Mac never names a model or a
 --    provider for this feature. Local first (a sovereign install is the same Mac): `qwen2.5-coder:7b`, the registry's
 --    local code default. A provider model is added only by a row an administrator inserts where the workspace opted in
---    (none is seeded). The engine's reader of this table is a follow-up of orazaka-ai-engine (until it lands, the code
+--    (none is seeded). The engine's reader of this table is a follow-up of sovkora-engine (until it lands, the code
 --    turn resolves the `code` category default, which is the same model).
 CREATE TABLE IF NOT EXISTS orazaka_feature_models (
     feature_key VARCHAR(120) NOT NULL,
@@ -1228,7 +1228,7 @@ SELECT 'agent.code.issue-to-pr', 1, model_name FROM orazaka_models WHERE model_n
 ON CONFLICT (feature_key, rank) DO NOTHING;
 
 -- ── 2026-10-29-feature-tool-bounds ──
--- ADR-029 / ADR-094 §4.1 (krizaka/orazaka-ai-engine#169): the most tool rounds one turn of a feature key may take is
+-- ADR-029 / ADR-094 §4.1 (krizaka/sovkora-engine#169): the most tool rounds one turn of a feature key may take is
 -- DATA an administrator edits, not a constant a deploy changes. Additive and idempotent. Runs in orazaka_db.
 --
 -- The row `*` is the default of every feature without a row of its own; it is seeded here so a local install and a
@@ -1247,7 +1247,7 @@ VALUES ('*', 8)
 ON CONFLICT (feature_key) DO NOTHING;
 
 -- ── 2026-10-30-feature-cache-policy ──
--- ADR-094 slice 5 (krizaka/orazaka-ai-engine#173): what of a feature's prompt a provider may cache is DATA an
+-- ADR-094 slice 5 (krizaka/sovkora-engine#173): what of a feature's prompt a provider may cache is DATA an
 -- administrator edits, not a constant a deploy changes. Additive and idempotent. Runs in orazaka_db.
 --
 -- The row `*` is the default of every feature without a row of its own; it is seeded SYSTEM_AND_TOOLS (the system
@@ -1266,7 +1266,7 @@ VALUES ('*', 'SYSTEM_AND_TOOLS')
 ON CONFLICT (feature_key) DO NOTHING;
 
 -- ── 2026-10-30-feature-structured-bounds ──
--- ADR-094 §4.6 (krizaka/orazaka-ai-engine#172): the most answers one structured-output call of a feature key may ask a
+-- ADR-094 §4.6 (krizaka/sovkora-engine#172): the most answers one structured-output call of a feature key may ask a
 -- model for (the first plus the corrections that name the schema violation) is DATA an administrator edits, not a
 -- constant a deploy changes. Additive and idempotent. Runs in orazaka_db.
 --
@@ -1285,7 +1285,7 @@ VALUES ('*', 2)
 ON CONFLICT (feature_key) DO NOTHING;
 
 -- ── 2026-10-30-flux1-schnell ──
--- 2026-10-30 — FLUX.1 [schnell] in the image catalogue (orazaka#508), for an existing database.
+-- 2026-10-30 — FLUX.1 [schnell] in the image catalogue (sovkora#508), for an existing database.
 --
 --   docker exec -i <postgres> psql -U <owner> -d orazaka_db < infra/migrations/2026-10-30-flux1-schnell.sql
 --
@@ -1306,7 +1306,7 @@ UPDATE orazaka_models SET vendor = 'Black Forest Labs', family = 'FLUX.1 schnell
 --   docker exec -i <postgres> psql -U <owner> -d orazaka_db < infra/migrations/2026-10-30-flux2-klein-references.sql
 --
 -- How many reference pictures a model conditions on is catalogue data, read by the engine's image adapter
--- (orazaka-ai-engine ReferenceImages): `options` = {"maxReferences": n}. A model without it refuses references by name.
+-- (sovkora-engine ReferenceImages): `options` = {"maxReferences": n}. A model without it refuses references by name.
 -- FLUX.2 [klein] 4B (Apache-2.0) conditions on them through stable-diffusion.cpp's `ref_images`; 4 keeps a 1360x768 key
 -- frame inside the 24-48 GB cards of the `small`/`big`/`cinema`/`kit` profiles. Only an image row whose options are empty is
 -- touched (image rows carry no other options). Idempotent.

@@ -5,22 +5,22 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.krizaka.orazaka</groupId>
-        <artifactId>orazaka-parent</artifactId>
+        <groupId>com.krizaka.sovkora</groupId>
+        <artifactId>sovkora-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
-        <relativePath>../../../orazaka-libs/orazaka-build/orazaka-parent/pom.xml</relativePath>
+        <relativePath>../../../sovkora-libs/sovkora-build/sovkora-parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>orazaka-job-service</artifactId>
-    <name>orazaka-job-service</name>
+    <artifactId>sovkora-job-service</artifactId>
+    <name>sovkora-job-service</name>
     <description>Job Orchestration service — async COMMAND executor (JobListener + strategies) over its own AMQP queues, emitting job lifecycle events</description>
 
-    <url>https://github.com/krizaka/orazaka-job-service</url>
+    <url>https://github.com/krizaka/sovkora-job-service</url>
 
     <scm>
-        <url>https://github.com/krizaka/orazaka-job-service</url>
-        <connection>scm:git:https://github.com/krizaka/orazaka-job-service.git</connection>
-        <developerConnection>scm:git:git@github.com:krizaka/orazaka-job-service.git</developerConnection>
+        <url>https://github.com/krizaka/sovkora-job-service</url>
+        <connection>scm:git:https://github.com/krizaka/sovkora-job-service.git</connection>
+        <developerConnection>scm:git:git@github.com:krizaka/sovkora-job-service.git</developerConnection>
     </scm>
     <licenses>
         <license>
@@ -33,8 +33,8 @@
 
 
     <properties>
-        <!-- GitHub Packages repository this artifact is published to (orazaka-parent). -->
-        <orazaka.repository>orazaka-job-service</orazaka.repository>
+        <!-- GitHub Packages repository this artifact is published to (sovkora-parent). -->
+        <sovkora.repository>sovkora-job-service</sovkora.repository>
     </properties>
 
 
@@ -55,8 +55,8 @@
             <artifactId>krizaka-users-client</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-assets</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-assets</artifactId>
         </dependency>
         <dependency>
             <groupId>com.krizaka</groupId>
@@ -90,7 +90,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
-        <!-- Persistence: owns orazaka_jobs lifecycle (JPA via persistence-app). -->
+        <!-- Persistence: owns sovkora_jobs lifecycle (JPA via persistence-app). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -102,8 +102,8 @@
 
         <!-- Cognitive stack (same libraries the monolith bundled — the pipeline runs in-process). -->
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-core</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.krizaka</groupId>
@@ -113,30 +113,30 @@
         <!-- Tier-1 job-plane contract: the JobCommand wire record every executor here reads, and
              the capability routing port this service answers for over /internal/v1 (ADR-037). -->
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-jobs-api</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-jobs-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-tools</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-tools</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-business</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-business</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-persistence-app</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-persistence-app</artifactId>
         </dependency>
         <!-- Bridge: core DB-backed outbound ports (CapabilityProvider, PipelineConfigProvider, …)
              implemented against the persistence inbound ports, so the in-process pipeline wires. -->
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-persistence-bridge</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-persistence-bridge</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-interceptors</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-interceptors</artifactId>
         </dependency>
 
         <!-- RabbitMQ AMQP — consumes jobs.media/jobs.text, emits job.{id}.done|error -->
@@ -201,8 +201,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-test-support</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-test-support</artifactId>
         </dependency>
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
